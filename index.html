@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Обзор научных мероприятий ФГН НИУ ВШЭ</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Обзор научных мепроприятий <small>2026–2027</small></h1>
+
+        <!-- Вкладки -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="events">📅 Мероприятия</button>
+            <button class="tab-btn" data-tab="grants">💰 Гранты</button>
+            <button class="tab-btn" data-tab="extra">🌟 Дополнительно</button>
+        </div>
+
+        <!-- Вкладка: Мероприятия -->
+        <div id="tab-events" class="tab-content active">
+            <div class="filters" id="filters-events">
+                <label>Тип
+                    <select id="filter-type"><option value="">Все</option></select>
+                </label>
+                <label>Месяц
+                    <select id="filter-month"><option value="">Все</option></select>
+                </label>
+                <label>Направление
+                    <select id="filter-topic"><option value="">Все</option></select>
+                </label>
+                <label>🔍
+                    <input type="text" id="filter-search" placeholder="Поиск по названию..." />
+                </label>
+                <button class="sort-btn" id="sort-date">📅 Сортировка по дате ↑</button>
+                <button class="clear-filters" id="clear-events">Сбросить</button>
+                <span id="result-count">0 мероприятий</span>
+            </div>
+            <div class="cards-grid" id="events-container"></div>
+        </div>
+
+        <!-- Вкладка: Гранты -->
+        <div id="tab-grants" class="tab-content">
+            <div style="margin-bottom:20px;">
+                <input type="text" id="grant-search" placeholder="Поиск по грантам..." />
+            </div>
+            <table class="simple-table" id="grants-table">
+                <thead><tr><th>Наименование конкурса</th><th>Дедлайн</th><th>Организатор</th></tr></thead>
+                <tbody id="grants-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Вкладка: Дополнительные возможности -->
+        <div id="tab-extra" class="tab-content">
+            <table class="simple-table" id="extra-table">
+                <thead><tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr></thead>
+                <tbody id="extra-body"></tbody>
+            </table>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
