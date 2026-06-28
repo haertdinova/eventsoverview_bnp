@@ -1,0 +1,197 @@
+// ---------- Загрузка CSV с помощью fetch ----------
+async function loadCSV(url) {
+    const response = await fetch(url);
+    const text = await response.text();
+    return parseCSV(text);
+}
+
+function parseCSV(text) {
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length === headers.length) {
+            const obj = {};
+            headers.forEach((h, idx) => { obj[h] = values[idx]; });
+            result.push(obj);
+        }
+    }
+    return result;
+}
+
+// ---------- Глобальные переменные ----------
+let eventsData = [];
+let grantsData = [];
+let extraData = [];
+let sortAsc = true;
+
+// ---------- Рендеринг мероприятий ----------
+function renderEvents() {
+    const type = document.getElementById('filter-type').value;
+    const month = document.getElementById('filter-month').value;
+    const topic = document.getElementById('filter-topic').value;
+    const search = document.getElementById('filter-search').value.toLowerCase().trim();
+
+    let filtered = eventsData.filter(e => {
+        if (type && e.type !== type) return false;
+        if (month && !e.date.includes(month)) return false;
+        if (topic && !e.topics.includes(topic)) return false;
+        if (search && !e.title.toLowerCase().includes(search)) return false;
+        return true;
+    });
+
+    // Сортировка по дате
+    if (document.getElementById('sort-date').textContent.includes('↑')) {
+        filtered.sort((a, b) => extractDateNumber(a.date) - extractDateNumber(b.date));
+    } else {
+        filtered.sort((a, b) => extractDateNumber(b.date) - extractDateNumber(a.date));
+    }
+
+    document.getElementById('result-count').textContent = filtered.length + ' мероприятий';
+
+    const container = document.getElementById('events-container');
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="no-results">Ничего не найдено. Попробуйте изменить фильтры.</div>';
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(e => {
+        const topicsHtml = (e.topics || '').split(';').map(t => `<span class="tag">${t.trim()}</span>`).join('');
+        const details = `
+            <div><strong>Организатор:</strong> ${e.organizer || '—'}</div>
+            <div><strong>Место:</strong> ${e.place || '—'}</div>
+            <div><strong>Дедлайн:</strong> ${e.deadline || '—'}</div>
+        `;
+        html += `
+            <div class="card">
+                <div class="card-title">${e.title}</div>
+                <div class="card-meta">
+                    <span>${e.type}</span>
+                    <span>📅 ${e.date || 'дата не указана'}</span>
+                </div>
+                <div class="card-tags">${topicsHtml}</div>
+                <div class="card-details">
+                    <div><strong>Организатор:</strong> ${e.organizer || '—'}</div>
+                    <div><strong>Место:</strong> ${e.place || '—'}</div>
+                    <div><strong>Дедлайн:</strong> ${e.deadline || '—'}</div>
+                </div>
+                <button class="toggle-details" data-id="${e.id}">Показать полную информацию</button>
+                <div class="card-extra" id="extra-${e.id}">${details}</div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+
+    document.querySelectorAll('.toggle-details').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const extra = document.getElementById('extra-' + id);
+            extra.classList.toggle('show');
+            this.textContent = extra.classList.contains('show') ? 'Скрыть' : 'Показать полную информацию';
+        });
+    });
+}
+
+function extractDateNumber(dateStr) {
+    if (!dateStr) return 999999;
+    const months = { 'января':1, 'февраля':2, 'марта':3, 'апреля':4, 'мая':5, 'июня':6, 'июля':7, 'августа':8, 'сентября':9, 'октября':10, 'ноября':11, 'декабря':12 };
+    const m = dateStr.match(/([А-Яа-я]+)/);
+    if (m && months[m[0]]) {
+        const monthNum = months[m[0]];
+        const year = dateStr.includes('2027') ? 2027 : 2026;
+        return year * 100 + monthNum;
+    }
+    const parts = dateStr.split('–');
+    if (parts.length > 1) {
+        const first = parts[0].trim();
+        const m2 = first.match(/([А-Яа-я]+)/);
+        if (m2 && months[m2[0]]) return 2026 * 100 + months[m2[0]];
+    }
+    return 999999;
+}
+
+// ---------- Рендеринг грантов ----------
+function renderGrants() {
+    const search = document.getElementById('grant-search').value.toLowerCase();
+    const filtered = grantsData.filter(g => g.name.toLowerCase().includes(search));
+    const tbody = document.getElementById('grants-body');
+    tbody.innerHTML = filtered.map(g => `<tr><td>${g.name}</td><td>${g.deadline}</td><td>${g.organizer}</td></tr>`).join('');
+}
+
+// ---------- Рендеринг дополнительных возможностей ----------
+function renderExtra() {
+    const tbody = document.getElementById('extra-body');
+    tbody.innerHTML = extraData.map(e => `<tr><td>${e.name}</td><td>${e.deadline}</td><td>${e.organizer}</td></tr>`).join('');
+}
+
+// ---------- Заполнение фильтров (на основе загруженных данных) ----------
+function populateFilters() {
+    const types = [...new Set(eventsData.map(e => e.type))].filter(Boolean);
+    const months = [...new Set(eventsData.map(e => {
+        const m = e.date.match(/([А-Яа-я]+)/);
+        return m ? m[0] : '';
+    }))].filter(Boolean);
+    const topics = [...new Set(eventsData.flatMap(e => (e.topics || '').split(';').map(t => t.trim()).filter(Boolean)))];
+
+    const typeSelect = document.getElementById('filter-type');
+    const monthSelect = document.getElementById('filter-month');
+    const topicSelect = document.getElementById('filter-topic');
+
+    types.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.textContent = t; typeSelect.appendChild(opt); });
+    months.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.textContent = m; monthSelect.appendChild(opt); });
+    topics.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.textContent = t; topicSelect.appendChild(opt); });
+}
+
+// ---------- Инициализация ----------
+async function init() {
+    // Загрузка CSV
+    eventsData = await loadCSV('events.csv');
+    grantsData = await loadCSV('grants.csv');
+    extraData = await loadCSV('extra.csv');
+
+    // Преобразование: если поле topics содержит разделитель ;, разбиваем в массив (для фильтра)
+    eventsData.forEach(e => {
+        if (e.topics) e.topics = e.topics.split(';').map(t => t.trim()).filter(Boolean);
+        else e.topics = [];
+        // Добавляем уникальный id (по индексу)
+        e.id = eventsData.indexOf(e) + 1;
+    });
+
+    populateFilters();
+    renderEvents();
+    renderGrants();
+    renderExtra();
+
+    // События фильтров
+    document.getElementById('filter-type').addEventListener('change', renderEvents);
+    document.getElementById('filter-month').addEventListener('change', renderEvents);
+    document.getElementById('filter-topic').addEventListener('change', renderEvents);
+    document.getElementById('filter-search').addEventListener('input', renderEvents);
+    document.getElementById('sort-date').addEventListener('click', function() {
+        sortAsc = !sortAsc;
+        this.textContent = sortAsc ? '📅 Сортировка по дате ↑' : '📅 Сортировка по дате ↓';
+        renderEvents();
+    });
+    document.getElementById('clear-events').addEventListener('click', function() {
+        document.getElementById('filter-type').value = '';
+        document.getElementById('filter-month').value = '';
+        document.getElementById('filter-topic').value = '';
+        document.getElementById('filter-search').value = '';
+        renderEvents();
+    });
+    document.getElementById('grant-search').addEventListener('input', renderGrants);
+
+    // Переключение вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+        });
+    });
+}
+
+init();
