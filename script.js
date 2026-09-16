@@ -72,9 +72,11 @@ const MONTH_STEMS = [
   ['май', 4], ['мая', 4], ['июн', 5], ['июл', 6], ['авгус', 7],
   ['сентя', 8], ['октяб', 9], ['нояб', 10], ['декаб', 11],
 ];
-const MONTH_NAMES = [
-  'января','февраля','марта','апреля','мая','июня',
-  'июля','августа','сентября','октября','ноября','декабря',
+
+/* Для отображения в фильтре — именительный падеж, с большой буквы */
+const MONTH_NAMES_NOM = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
 
 function parseRussianDate(str) {
@@ -221,9 +223,13 @@ async function loadAll() {
 function populateFilters() {
   const types = [...new Set(state.events.map(e => e.type).filter(Boolean))].sort();
 
-  const months = [...new Set(
-    state.events.filter(e => e.dateStart).map(e => MONTH_NAMES[e.dateStart.getMonth()])
-  )].sort((a, b) => MONTH_NAMES.indexOf(a) - MONTH_NAMES.indexOf(b));
+  // Месяцы — уникальные, в порядке календаря, с большой буквы, в им. падеже
+  const monthIdxSet = new Set(
+    state.events.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
+  );
+  const months = [...monthIdxSet]
+    .sort((a, b) => a - b)
+    .map(idx => MONTH_NAMES_NOM[idx]);
 
   fillSelect('filter-type', types, 'Все типы');
   fillSelect('filter-month', months, 'Все месяцы');
@@ -249,7 +255,10 @@ function renderEvents() {
 
   let list = state.events.filter(e => {
     if (type && e.type !== type) return false;
-    if (month && (!e.dateStart || MONTH_NAMES[e.dateStart.getMonth()] !== month)) return false;
+    if (month) {
+      if (!e.dateStart) return false;
+      if (MONTH_NAMES_NOM[e.dateStart.getMonth()] !== month) return false;
+    }
     if (q) {
       const hay = [e.title, e.organizer, e.dateRaw].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
