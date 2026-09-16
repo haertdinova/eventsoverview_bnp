@@ -72,8 +72,6 @@ const MONTH_STEMS = [
   ['май', 4], ['мая', 4], ['июн', 5], ['июл', 6], ['авгус', 7],
   ['сентя', 8], ['октяб', 9], ['нояб', 10], ['декаб', 11],
 ];
-
-/* Для отображения в фильтре — именительный падеж, с большой буквы */
 const MONTH_NAMES_NOM = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
@@ -151,6 +149,10 @@ const state = {
 /* ============================================================
  *  НОРМАЛИЗАЦИЯ
  * ============================================================ */
+function hasMarker(row) {
+  return !!(row['Метка'] || '').trim();
+}
+
 function normalizeEvent(row) {
   const title     = row['Название мероприятия'] || row['Название'] || '';
   const dateStr   = row['Даты проведения'] || '';
@@ -164,6 +166,7 @@ function normalizeEvent(row) {
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
     type:         detectType(title),
+    highlight:    hasMarker(row),
   };
 }
 
@@ -175,6 +178,7 @@ function normalizeSimple(row) {
     deadlineDate: parseRussianDate(deadlineS),
     organizer:    row['Организатор'] || '',
     link:         row['Ссылка'] || '',
+    highlight:    hasMarker(row),
   };
 }
 
@@ -223,7 +227,6 @@ async function loadAll() {
 function populateFilters() {
   const types = [...new Set(state.events.map(e => e.type).filter(Boolean))].sort();
 
-  // Месяцы — уникальные, в порядке календаря, с большой буквы, в им. падеже
   const monthIdxSet = new Set(
     state.events.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
   );
@@ -288,9 +291,10 @@ function eventCardHTML(e) {
     : escapeHtml(e.title);
 
   return `
-    <article class="card" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+    <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
       <div class="card-header">
         <span class="type-badge">${escapeHtml(e.type)}</span>
+        ${e.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
       </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
@@ -337,9 +341,10 @@ function simpleCardHTML(item, badgeLabel, c) {
     : escapeHtml(item.name);
 
   return `
-    <article class="card" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+    <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
       <div class="card-header">
         <span class="type-badge">${escapeHtml(badgeLabel)}</span>
+        ${item.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
       </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
