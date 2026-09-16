@@ -1,63 +1,97 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Обзор научных мероприятий ФГН НИУ ВШЭ</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Научные мероприятия · ФГН НИУ ВШЭ</title>
+
+  <!-- Резервный шрифт, если HSE Sans не загрузится -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>🎓 Обзор научных мепроприятий <small>2026–2027</small></h1>
+  <div class="container">
+    <header class="hero">
+      <div>
+        <h1>Научные мероприятия</h1>
+        <p class="hero-sub">
+          Конференции, гранты и возможности для сотрудников ФГН НИУ ВШЭ · 2026–2027
+        </p>
+      </div>
+      <a class="sheet-link" id="sheet-link" target="_blank" rel="noopener">
+        ✎ Редактировать таблицу
+      </a>
+    </header>
 
-        <!-- Вкладки -->
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="events">📅 Мероприятия</button>
-            <button class="tab-btn" data-tab="grants">💰 Гранты</button>
-            <button class="tab-btn" data-tab="extra">🌟 Дополнительно</button>
-        </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="events">
+        <span>📅 Мероприятия</span>
+        <span class="tab-count" id="count-events">0</span>
+      </button>
+      <button class="tab-btn" data-tab="grants">
+        <span>💰 Гранты</span>
+        <span class="tab-count" id="count-grants">0</span>
+      </button>
+      <button class="tab-btn" data-tab="extra">
+        <span>🌟 Дополнительно</span>
+        <span class="tab-count" id="count-extra">0</span>
+      </button>
+    </nav>
 
-        <!-- Вкладка: Мероприятия -->
-        <div id="tab-events" class="tab-content active">
-            <div class="filters" id="filters-events">
-                <label>Тип
-                    <select id="filter-type"><option value="">Все</option></select>
-                </label>
-                <label>Месяц
-                    <select id="filter-month"><option value="">Все</option></select>
-                </label>
-                <label>Направление
-                    <select id="filter-topic"><option value="">Все</option></select>
-                </label>
-                <label>🔍
-                    <input type="text" id="filter-search" placeholder="Поиск по названию..." />
-                </label>
-                <button class="sort-btn" id="sort-date">📅 Сортировка по дате ↑</button>
-                <button class="clear-filters" id="clear-events">Сбросить</button>
-                <span id="result-count">0 мероприятий</span>
-            </div>
-            <div class="cards-grid" id="events-container"></div>
+    <!-- Вкладка: Мероприятия -->
+    <section id="tab-events" class="tab-content active">
+      <div class="filters">
+        <div class="filter">
+          <label for="filter-type">Тип</label>
+          <select id="filter-type"><option value="">Все типы</option></select>
         </div>
+        <div class="filter">
+          <label for="filter-month">Месяц</label>
+          <select id="filter-month"><option value="">Все месяцы</option></select>
+        </div>
+        <div class="filter filter-search">
+          <label for="filter-search">Поиск</label>
+          <input type="search" id="filter-search" placeholder="Название, организатор, дата…" />
+        </div>
+        <button class="btn-ghost" id="clear-events">Сбросить</button>
+        <button class="btn-sort" id="sort-date">Дата ↑</button>
+      </div>
+      <div class="cards-grid" id="events-container"></div>
+    </section>
 
-        <!-- Вкладка: Гранты -->
-        <div id="tab-grants" class="tab-content">
-            <div style="margin-bottom:20px;">
-                <input type="text" id="grant-search" placeholder="Поиск по грантам..." />
-            </div>
-            <table class="simple-table" id="grants-table">
-                <thead><tr><th>Наименование конкурса</th><th>Дедлайн</th><th>Организатор</th></tr></thead>
-                <tbody id="grants-body"></tbody>
-            </table>
-        </div>
+    <!-- Вкладка: Гранты -->
+    <section id="tab-grants" class="tab-content">
+      <div class="list-toolbar">
+        <input type="search" id="grant-search" placeholder="Поиск по грантам…" />
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr>
+          </thead>
+          <tbody id="grants-body"></tbody>
+        </table>
+      </div>
+    </section>
 
-        <!-- Вкладка: Дополнительные возможности -->
-        <div id="tab-extra" class="tab-content">
-            <table class="simple-table" id="extra-table">
-                <thead><tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr></thead>
-                <tbody id="extra-body"></tbody>
-            </table>
-        </div>
-    </div>
-    <script src="script.js"></script>
+    <!-- Вкладка: Дополнительно -->
+    <section id="tab-extra" class="tab-content">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr>
+          </thead>
+          <tbody id="extra-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer"><span id="status">Загрузка данных…</span></footer>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
