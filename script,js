@@ -1,9 +1,4 @@
-/* ============================================================
- *  КОНФИГУРАЦИЯ
- *  Замени PASTE_YOUR_SHEET_ID_HERE на ID своей Google-таблицы.
- *  ID — длинная строка между /d/ и /edit в адресе таблицы.
- * ============================================================ */
-const SHEET_ID = 'PASTE_YOUR_SHEET_ID_HERE';
+const SHEET_ID = '1xpqZhHrXlKluMDPfkRgJBewJrlUikF-MB4Vkv9X8du4';
 
 const SHEET_NAMES = {
   events: 'Мероприятия',
