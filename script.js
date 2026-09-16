@@ -1,438 +1,333 @@
 /* ============================================================
- *  КОНФИГУРАЦИЯ
+ *  HSE SANS
  * ============================================================ */
-const SHEET_ID = '1xpqZhHrXlKluMDPfkRgJBewJrlUikF-MB4Vkv9X8du4';
-
-const SHEET_NAMES = {
-  events: 'Мероприятия',
-  grants: 'Гранты',
-  extra:  'Дополнительно',
-};
-
-/* ============================================================
- *  ЗАГРУЗКА CSV ИЗ GOOGLE SHEETS
- * ============================================================ */
-function gvizUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-Thin.otf') format('opentype');
+  font-weight: 100; font-style: normal; font-display: swap;
 }
-
-function parseCSV(text) {
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i], next = text[i + 1];
-    if (inQuotes) {
-      if (c === '"' && next === '"') { field += '"'; i++; }
-      else if (c === '"') { inQuotes = false; }
-      else { field += c; }
-    } else {
-      if (c === '"') { inQuotes = true; }
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else if (c === '\r') {}
-      else { field += c; }
-    }
-  }
-  if (field !== '' || row.length) { row.push(field); rows.push(row); }
-  return rows;
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-Regular.otf') format('opentype');
+  font-weight: 400; font-style: normal; font-display: swap;
 }
-
-function rowsToObjects(rows) {
-  if (!rows.length) return [];
-  const headers = rows[0].map(h => h.trim());
-  return rows.slice(1)
-    .filter(r => r.some(c => String(c).trim() !== ''))
-    .map(r => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
-      return obj;
-    });
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-Italic.otf') format('opentype');
+  font-weight: 400; font-style: italic; font-display: swap;
 }
-
-async function loadSheet(name) {
-  const res = await fetch(gvizUrl(name));
-  if (!res.ok) throw new Error(`HTTP ${res.status} для листа «${name}»`);
-  return rowsToObjects(parseCSV(await res.text()));
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-SemiBold.otf') format('opentype');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-Bold.otf') format('opentype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'HSE Sans';
+  src: url('fonts/HSESans-Black.otf') format('opentype');
+  font-weight: 900; font-style: normal; font-display: swap;
 }
 
 /* ============================================================
- *  ДАТЫ
+ *  ПЕРЕМЕННЫЕ
  * ============================================================ */
-const MONTH_STEMS = [
-  ['январ', 0], ['февра', 1], ['март', 2], ['апрел', 3],
-  ['май', 4], ['мая', 4], ['июн', 5], ['июл', 6], ['авгус', 7],
-  ['сентя', 8], ['октяб', 9], ['нояб', 10], ['декаб', 11],
-];
-const MONTH_NAMES = [
-  'января','февраля','марта','апреля','мая','июня',
-  'июля','августа','сентября','октября','ноября','декабря',
-];
+:root {
+  --font: 'HSE Sans', 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-function parseRussianDate(str) {
-  if (!str) return null;
-  const s = String(str).trim();
-  if (!s) return null;
+  /* Акценты разделов */
+  --c-events: #4f46e5;
+  --c-events-light: #eef2ff;
+  --c-grants: #059669;
+  --c-grants-light: #ecfdf5;
+  --c-extra: #d97706;
+  --c-extra-light: #fffbeb;
 
-  let m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
-  if (m) {
-    let y = +m[3]; if (y < 100) y += 2000;
-    return new Date(y, +m[2] - 1, +m[1]);
-  }
-  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  --primary: var(--c-events);
+  --primary-light: var(--c-events-light);
 
-  const lower = s.toLowerCase();
-  const yearM = lower.match(/(\d{4})/);
-  const year = yearM ? +yearM[1] : new Date().getFullYear();
-
-  for (const [stem, monthIdx] of MONTH_STEMS) {
-    const pos = lower.indexOf(stem);
-    if (pos === -1) continue;
-    const before = lower.slice(0, pos);
-    const days = before.match(/\d{1,2}(?=\D*$)/g);
-    const day = days && days.length ? +days[days.length - 1] : 1;
-    return new Date(year, monthIdx, day);
-  }
-  return null;
-}
-
-function daysUntil(date) {
-  if (!date) return Infinity;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((date - today) / 86400000);
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  --bg: #f7f8fc;
+  --surface: #ffffff;
+  --border: #e6e8f0;
+  --border-strong: #d4d8e5;
+  --text: #0f172a;
+  --text-muted: #556177;
+  --text-soft: #8b95a8;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.04);
+  --shadow: 0 4px 20px rgba(15,23,42,.06);
+  --shadow-lg: 0 16px 32px rgba(15,23,42,.10);
+  --t: .2s cubic-bezier(.4,0,.2,1);
 }
 
 /* ============================================================
- *  ОПРЕДЕЛЕНИЕ ТИПА ПО НАЗВАНИЮ
+ *  RESET + BASE
  * ============================================================ */
-const TYPE_KEYWORDS = [
-  ['конференц',    'Конференция'],
-  ['симпозиум',    'Симпозиум'],
-  ['круглый стол', 'Круглый стол'],
-  ['семинар',      'Семинар'],
-  ['форум',        'Форум'],
-  ['чтени',        'Чтения'],
-  ['съезд',        'Съезд'],
-  ['школа',        'Школа'],
-  ['конкурс',      'Конкурс'],
-];
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16.5px; }
 
-function detectType(title) {
-  const t = (title || '').toLowerCase();
-  for (const [kw, type] of TYPE_KEYWORDS) if (t.includes(kw)) return type;
-  return 'Мероприятие';
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(99,102,241,.07) 0, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168,85,247,.05) 0, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  padding: 22px 20px 40px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
 }
 
-function stringToHue(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
-  return h;
+.container { max-width: 1340px; margin: 0 auto; }
+
+/* ============================================================
+ *  HERO
+ * ============================================================ */
+.hero { margin-bottom: 18px; }
+.hero h1 {
+  font-size: clamp(1.75rem, 3.5vw, 2.3rem);
+  font-weight: 900;
+  letter-spacing: -.03em; line-height: 1.1;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  margin-bottom: 4px;
+}
+.hero-sub {
+  color: var(--text-muted); font-size: .98rem;
+  font-weight: 400; line-height: 1.5;
 }
 
 /* ============================================================
- *  СОСТОЯНИЕ
+ *  TABS — разные цвета для разделов
  * ============================================================ */
-const state = {
-  events: [], grants: [], extra: [],
-  sortDir: 'asc',
-};
-
-/* ============================================================
- *  НОРМАЛИЗАЦИЯ
- * ============================================================ */
-function normalizeEvent(row) {
-  const title     = row['Название мероприятия'] || row['Название'] || '';
-  const dateStr   = row['Даты проведения'] || '';
-  const deadlineS = row['Дедлайн подачи заявок'] || '';
-  return {
-    title,
-    link:         row['Ссылка на сайт'] || '',
-    dateRaw:      dateStr,
-    dateStart:    parseRussianDate(dateStr),
-    organizer:    row['Организатор'] || '',
-    deadlineRaw:  deadlineS,
-    deadlineDate: parseRussianDate(deadlineS),
-    type:         detectType(title),
-  };
+.tabs {
+  display: flex; gap: 4px; padding: 4px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  margin-bottom: 18px; width: fit-content; max-width: 100%;
+  overflow-x: auto; box-shadow: var(--shadow-sm);
 }
-
-function normalizeSimple(row) {
-  const deadlineS = row['Дедлайн'] || '';
-  return {
-    name:         row['Название'] || row['Наименование'] || '',
-    deadlineRaw:  deadlineS,
-    deadlineDate: parseRussianDate(deadlineS),
-    organizer:    row['Организатор'] || '',
-    link:         row['Ссылка'] || '',
-  };
+.tab-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 20px; border: none; background: transparent;
+  font-family: inherit; font-size: .95rem; font-weight: 600;
+  color: var(--text-muted); cursor: pointer;
+  border-radius: var(--radius-pill); transition: var(--t); white-space: nowrap;
 }
+.tab-btn:hover { color: var(--text); background: rgba(99,102,241,.06); }
 
-/* ============================================================
- *  ЗАГРУЗКА
- * ============================================================ */
-async function loadAll() {
-  showSkeletons();
-  try {
-    const [ev, gr, ex] = await Promise.all([
-      loadSheet(SHEET_NAMES.events),
-      loadSheet(SHEET_NAMES.grants),
-      loadSheet(SHEET_NAMES.extra),
-    ]);
+/* Каждая активная вкладка — своего цвета */
+.tab-btn.active[data-tab="events"] {
+  background: var(--c-events); color: #fff;
+  box-shadow: 0 5px 14px rgba(79,70,229,.35);
+}
+.tab-btn.active[data-tab="grants"] {
+  background: var(--c-grants); color: #fff;
+  box-shadow: 0 5px 14px rgba(5,150,105,.35);
+}
+.tab-btn.active[data-tab="extra"] {
+  background: var(--c-extra); color: #fff;
+  box-shadow: 0 5px 14px rgba(217,119,6,.35);
+}
+.tab-btn.active:hover { background: inherit; }
 
-    state.events = ev.map(normalizeEvent);
-    state.grants = gr.map(normalizeSimple);
-    state.extra  = ex.map(normalizeSimple);
+.tab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 20px; padding: 0 7px;
+  font-size: .72rem; font-weight: 700;
+  background: rgba(0,0,0,.06); border-radius: var(--radius-pill); opacity: .9;
+}
+.tab-btn.active .tab-count { background: rgba(255,255,255,.28); }
 
-    document.getElementById('count-events').textContent = state.events.length;
-    document.getElementById('count-grants').textContent = state.grants.length;
-    document.getElementById('count-extra').textContent  = state.extra.length;
-
-    populateFilters();
-    renderEvents();
-    renderGrants();
-    renderExtra();
-
-    document.getElementById('status').textContent =
-      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
-  } catch (err) {
-    console.error(err);
-    document.getElementById('events-container').innerHTML =
-      `<div class="error-box">
-        <div style="font-size:3rem;margin-bottom:12px;">⚠️</div>
-        <strong style="font-size:1.15rem;">Не удалось загрузить данные</strong>
-        <p style="margin-top:10px;">${escapeHtml(err.message)}</p>
-        <p style="margin-top:10px;font-size:.9em;">
-          Проверьте, что SHEET_ID верный и таблица доступна по ссылке для чтения.
-        </p>
-      </div>`;
-    document.getElementById('status').textContent = 'Ошибка загрузки данных';
-  }
+.tab-content { display: none; animation: fadeIn .25s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ============================================================
- *  ФИЛЬТРЫ
+ *  FILTERS — компактнее
  * ============================================================ */
-function populateFilters() {
-  const types = [...new Set(state.events.map(e => e.type).filter(Boolean))].sort();
+.filters {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm); margin-bottom: 16px;
+}
+.filter { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.filter label {
+  font-size: .7rem; font-weight: 600; color: var(--text-soft);
+  text-transform: uppercase; letter-spacing: .06em; padding-left: 3px;
+}
+.filter select, .filter input {
+  padding: 8px 13px; border: 1px solid var(--border);
+  background: var(--bg); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: .93rem; color: var(--text);
+  transition: var(--t); outline: none;
+}
+.filter select:focus, .filter input:focus {
+  border-color: var(--primary); background: #fff;
+  box-shadow: 0 0 0 3px rgba(79,70,229,.14);
+}
+.filter-search { flex: 1; min-width: 220px; }
 
-  const months = [...new Set(
-    state.events.filter(e => e.dateStart).map(e => MONTH_NAMES[e.dateStart.getMonth()])
-  )].sort((a, b) => MONTH_NAMES.indexOf(a) - MONTH_NAMES.indexOf(b));
+.btn-ghost, .btn-sort {
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: .92rem;
+  cursor: pointer; transition: var(--t); white-space: nowrap; height: 38px;
+}
+.btn-ghost {
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border); font-weight: 400;
+}
+.btn-ghost:hover {
+  background: var(--bg); color: var(--text); border-color: var(--border-strong);
+}
+.btn-sort {
+  background: var(--primary-light); color: var(--primary);
+  border: 1px solid transparent; font-weight: 600;
+}
+.btn-sort:hover { filter: brightness(.96); }
 
-  fillSelect('filter-type', types, 'Все типы');
-  fillSelect('filter-month', months, 'Все месяцы');
+/* ============================================================
+ *  CARDS — плотнее
+ * ============================================================ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+.card {
+  position: relative; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px 14px;
+  display: flex; flex-direction: column;
+  transition: var(--t); overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--card-accent, var(--primary));
+  opacity: 0; transition: var(--t);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: transparent;
+}
+.card:hover::before { opacity: 1; }
+
+.card-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.type-badge {
+  display: inline-flex; align-items: center; padding: 3px 11px;
+  font-size: .74rem; font-weight: 600; border-radius: var(--radius-pill);
+  background: var(--badge-bg, var(--primary-light));
+  color: var(--badge-fg, var(--primary));
+  letter-spacing: .02em;
+}
+.card-title {
+  font-size: 1.05rem; font-weight: 700; line-height: 1.35;
+  margin-bottom: 10px; letter-spacing: -.005em;
+}
+.card-title-link {
+  color: inherit;
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size .25s ease, color .15s ease;
+}
+.card-title-link:hover {
+  color: var(--card-accent, var(--primary));
+  background-size: 100% 1px;
 }
 
-function fillSelect(id, values, placeholder) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-  values.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = v; opt.textContent = v;
-    sel.appendChild(opt);
-  });
+.card-info {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: .9rem; color: var(--text-muted); margin-bottom: 10px;
+}
+.card-info > div { display: flex; align-items: flex-start; gap: 8px; line-height: 1.45; }
+.card-info .icon { flex-shrink: 0; width: 18px; text-align: center; opacity: .7; font-size: 1em; }
+
+.card-footer {
+  margin-top: auto; padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+}
+.deadline {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .87rem; font-weight: 600; color: var(--text);
+}
+.deadline.soon   { color: #c2660a; }
+.deadline.urgent { color: #c81e1e; }
+.deadline.past   { color: var(--text-soft); text-decoration: line-through; }
+.card-link {
+  font-size: .87rem; font-weight: 600;
+  color: var(--card-accent, var(--primary));
+  text-decoration: none;
+  white-space: nowrap;
+}
+.card-link:hover { text-decoration: underline; }
+
+/* ============================================================
+ *  EMPTY / LOADING
+ * ============================================================ */
+.no-results {
+  grid-column: 1 / -1; text-align: center;
+  padding: 40px 20px; color: var(--text-muted);
+  font-size: .98rem;
+}
+.no-results .emoji { font-size: 2.8rem; display: block; margin-bottom: 10px; opacity: .55; }
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius); height: 190px;
+}
+@keyframes shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.error-box {
+  grid-column: 1 / -1; padding: 32px 20px; text-align: center;
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: var(--radius); color: #991b1b;
+  font-size: .95rem;
+}
+
+.footer {
+  margin-top: 22px; text-align: center;
+  font-size: .82rem; color: var(--text-soft);
 }
 
 /* ============================================================
- *  РЕНДЕР: МЕРОПРИЯТИЯ
+ *  АДАПТИВ
  * ============================================================ */
-function renderEvents() {
-  const type  = document.getElementById('filter-type').value;
-  const month = document.getElementById('filter-month').value;
-  const q     = document.getElementById('filter-search').value.toLowerCase().trim();
-
-  let list = state.events.filter(e => {
-    if (type && e.type !== type) return false;
-    if (month && (!e.dateStart || MONTH_NAMES[e.dateStart.getMonth()] !== month)) return false;
-    if (q) {
-      const hay = [e.title, e.organizer, e.dateRaw].join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-
-  list.sort((a, b) => {
-    const da = a.dateStart ? a.dateStart.getTime() : Infinity;
-    const db = b.dateStart ? b.dateStart.getTime() : Infinity;
-    return state.sortDir === 'asc' ? da - db : db - da;
-  });
-
-  const container = document.getElementById('events-container');
-  if (!list.length) {
-    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено. Попробуйте изменить фильтры.');
-    return;
-  }
-  container.innerHTML = list.map(eventCardHTML).join('');
+@media (max-width: 720px) {
+  html { font-size: 16px; }
+  body { padding: 16px 14px 32px; }
+  .filters { flex-direction: column; align-items: stretch; padding: 10px 12px; }
+  .filter { min-width: 0; }
+  .btn-ghost, .btn-sort { width: 100%; }
+  .cards-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tab-btn { padding: 8px 14px; font-size: .88rem; }
 }
-
-function eventCardHTML(e) {
-  const hue     = stringToHue(e.type);
-  const accent  = `hsl(${hue}, 65%, 55%)`;
-  const badgeBg = `hsl(${hue}, 80%, 95%)`;
-  const badgeFg = `hsl(${hue}, 65%, 40%)`;
-
-  const hasLink = /^https?:\/\//i.test(e.link);
-  const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
-    : escapeHtml(e.title);
-
-  const dd = daysUntil(e.deadlineDate);
-  let dClass = '';
-  if (e.deadlineDate) {
-    if (dd < 0) dClass = 'past';
-    else if (dd <= 7) dClass = 'urgent';
-    else if (dd <= 30) dClass = 'soon';
-  }
-  const deadlineLabel = e.deadlineRaw || 'не указан';
-  const deadlineSuffix = (e.deadlineDate && dd >= 0 && dd <= 60) ? ` · ${dd} дн.` : '';
-
-  return `
-    <article class="card" style="--card-accent:${accent}; --badge-bg:${badgeBg}; --badge-fg:${badgeFg};">
-      <div class="card-header">
-        <span class="type-badge">${escapeHtml(e.type)}</span>
-      </div>
-      <h3 class="card-title">${titleHTML}</h3>
-      <div class="card-info">
-        ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🏛</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
-      </div>
-      <div class="card-footer">
-        <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${deadlineSuffix}</span>
-        ${hasLink ? `<a class="card-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
-      </div>
-    </article>`;
-}
-
-/* ============================================================
- *  РЕНДЕР: ГРАНТЫ И ДОПОЛНИТЕЛЬНО (карточки)
- * ============================================================ */
-function renderGrants() {
-  const q = document.getElementById('grant-search').value.toLowerCase().trim();
-  const list = state.grants.filter(g =>
-    !q || (g.name + ' ' + g.organizer).toLowerCase().includes(q)
-  );
-  const container = document.getElementById('grants-container');
-  if (!list.length) {
-    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
-    return;
-  }
-  container.innerHTML = list.map(g => simpleCardHTML(g, 'Грант', 145)).join('');
-}
-
-function renderExtra() {
-  const q = document.getElementById('extra-search').value.toLowerCase().trim();
-  const list = state.extra.filter(x =>
-    !q || (x.name + ' ' + x.organizer).toLowerCase().includes(q)
-  );
-  const container = document.getElementById('extra-container');
-  if (!list.length) {
-    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
-    return;
-  }
-  container.innerHTML = list.map(x => simpleCardHTML(x, 'Возможность', 270)).join('');
-}
-
-function simpleCardHTML(item, badgeLabel, hue) {
-  const accent  = `hsl(${hue}, 60%, 55%)`;
-  const badgeBg = `hsl(${hue}, 75%, 95%)`;
-  const badgeFg = `hsl(${hue}, 60%, 40%)`;
-
-  const hasLink = /^https?:\/\//i.test(item.link);
-  const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
-    : escapeHtml(item.name);
-
-  const dd = daysUntil(item.deadlineDate);
-  let dClass = '';
-  if (item.deadlineDate) {
-    if (dd < 0) dClass = 'past';
-    else if (dd <= 7) dClass = 'urgent';
-    else if (dd <= 30) dClass = 'soon';
-  }
-  const deadlineLabel = item.deadlineRaw || 'не указан';
-  const deadlineSuffix = (item.deadlineDate && dd >= 0 && dd <= 60) ? ` · ${dd} дн.` : '';
-
-  return `
-    <article class="card" style="--card-accent:${accent}; --badge-bg:${badgeBg}; --badge-fg:${badgeFg};">
-      <div class="card-header">
-        <span class="type-badge">${escapeHtml(badgeLabel)}</span>
-      </div>
-      <h3 class="card-title">${titleHTML}</h3>
-      <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🏛</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
-      </div>
-      <div class="card-footer">
-        <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${deadlineSuffix}</span>
-        ${hasLink ? `<a class="card-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
-      </div>
-    </article>`;
-}
-
-function emptyHTML(emoji, text) {
-  return `<div class="no-results">
-    <span class="emoji">${emoji}</span>
-    <div>${text}</div>
-  </div>`;
-}
-
-/* ============================================================
- *  СКЕЛЕТОНЫ
- * ============================================================ */
-function showSkeletons() {
-  document.getElementById('events-container').innerHTML =
-    Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join('');
-  document.getElementById('grants-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
-  document.getElementById('extra-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
-}
-
-/* ============================================================
- *  ИНИЦИАЛИЗАЦИЯ
- * ============================================================ */
-function bindUI() {
-  ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderEvents);
-  });
-
-  document.getElementById('clear-events').addEventListener('click', () => {
-    ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    renderEvents();
-  });
-
-  document.getElementById('sort-date').addEventListener('click', function () {
-    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-    this.textContent = state.sortDir === 'asc' ? 'Дата ↑' : 'Дата ↓';
-    renderEvents();
-  });
-
-  document.getElementById('grant-search').addEventListener('input', renderGrants);
-  document.getElementById('extra-search').addEventListener('input', renderExtra);
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      this.classList.add('active');
-      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
-    });
-  });
-
-  const link = document.getElementById('sheet-link');
-  if (SHEET_ID && SHEET_ID !== 'PASTE_YOUR_SHEET_ID_HERE') {
-    link.href = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
-  } else {
-    link.style.display = 'none';
-  }
-}
-
-bindUI();
-loadAll();
