@@ -1,3 +1,6 @@
+/* ============================================================
+ *  КОНФИГУРАЦИЯ
+ * ============================================================ */
 const SHEET_ID = '1xpqZhHrXlKluMDPfkRgJBewJrlUikF-MB4Vkv9X8du4';
 
 const SHEET_NAMES = {
@@ -26,7 +29,7 @@ function parseCSV(text) {
       if (c === '"') { inQuotes = true; }
       else if (c === ',') { row.push(field); field = ''; }
       else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else if (c === '\r') { /* skip */ }
+      else if (c === '\r') {}
       else { field += c; }
     }
   }
@@ -53,7 +56,7 @@ async function loadSheet(name) {
 }
 
 /* ============================================================
- *  УТИЛИТЫ ДАТ
+ *  ДАТЫ
  * ============================================================ */
 const MONTH_STEMS = [
   ['январ', 0], ['февра', 1], ['март', 2], ['апрел', 3],
@@ -65,28 +68,19 @@ const MONTH_NAMES = [
   'июля','августа','сентября','октября','ноября','декабря',
 ];
 
-/**
- * Парсит свободную строку с русской датой в Date.
- * Понимает: "10–11 сентября 2026 г.", "сентябрь 2026 г.",
- * "30 сентября – 2 октября 2026 г.", "01.09.2026", "2026-09-01".
- * Возвращает ПЕРВУЮ дату из строки.
- */
 function parseRussianDate(str) {
   if (!str) return null;
   const s = String(str).trim();
   if (!s) return null;
 
-  // Числовые форматы
   let m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
   if (m) {
-    let y = +m[3];
-    if (y < 100) y += 2000;
+    let y = +m[3]; if (y < 100) y += 2000;
     return new Date(y, +m[2] - 1, +m[1]);
   }
   m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
 
-  // Текстовый формат
   const lower = s.toLowerCase();
   const yearM = lower.match(/(\d{4})/);
   const year = yearM ? +yearM[1] : new Date().getFullYear();
@@ -94,11 +88,9 @@ function parseRussianDate(str) {
   for (const [stem, monthIdx] of MONTH_STEMS) {
     const pos = lower.indexOf(stem);
     if (pos === -1) continue;
-
     const before = lower.slice(0, pos);
     const days = before.match(/\d{1,2}(?=\D*$)/g);
     const day = days && days.length ? +days[days.length - 1] : 1;
-
     return new Date(year, monthIdx, day);
   }
   return null;
@@ -133,17 +125,13 @@ const TYPE_KEYWORDS = [
 
 function detectType(title) {
   const t = (title || '').toLowerCase();
-  for (const [kw, type] of TYPE_KEYWORDS) {
-    if (t.includes(kw)) return type;
-  }
+  for (const [kw, type] of TYPE_KEYWORDS) if (t.includes(kw)) return type;
   return 'Мероприятие';
 }
 
 function stringToHue(str) {
   let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h * 31 + str.charCodeAt(i)) % 360;
-  }
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
   return h;
 }
 
@@ -151,14 +139,12 @@ function stringToHue(str) {
  *  СОСТОЯНИЕ
  * ============================================================ */
 const state = {
-  events: [],
-  grants: [],
-  extra: [],
+  events: [], grants: [], extra: [],
   sortDir: 'asc',
 };
 
 /* ============================================================
- *  НОРМАЛИЗАЦИЯ СТРОК
+ *  НОРМАЛИЗАЦИЯ
  * ============================================================ */
 function normalizeEvent(row) {
   const title     = row['Название мероприятия'] || row['Название'] || '';
@@ -177,16 +163,18 @@ function normalizeEvent(row) {
 }
 
 function normalizeSimple(row) {
+  const deadlineS = row['Дедлайн'] || '';
   return {
-    name:      row['Название'] || row['Наименование'] || '',
-    deadline:  row['Дедлайн'] || '',
-    organizer: row['Организатор'] || '',
-    link:      row['Ссылка'] || '',
+    name:         row['Название'] || row['Наименование'] || '',
+    deadlineRaw:  deadlineS,
+    deadlineDate: parseRussianDate(deadlineS),
+    organizer:    row['Организатор'] || '',
+    link:         row['Ссылка'] || '',
   };
 }
 
 /* ============================================================
- *  ЗАГРУЗКА ВСЕГО
+ *  ЗАГРУЗКА
  * ============================================================ */
 async function loadAll() {
   showSkeletons();
@@ -216,10 +204,10 @@ async function loadAll() {
     console.error(err);
     document.getElementById('events-container').innerHTML =
       `<div class="error-box">
-        <div style="font-size:2.5rem;margin-bottom:10px;">⚠️</div>
-        <strong>Не удалось загрузить данные</strong>
-        <p style="margin-top:8px;">${escapeHtml(err.message)}</p>
-        <p style="margin-top:8px;font-size:.85em;">
+        <div style="font-size:3rem;margin-bottom:12px;">⚠️</div>
+        <strong style="font-size:1.15rem;">Не удалось загрузить данные</strong>
+        <p style="margin-top:10px;">${escapeHtml(err.message)}</p>
+        <p style="margin-top:10px;font-size:.9em;">
           Проверьте, что SHEET_ID верный и таблица доступна по ссылке для чтения.
         </p>
       </div>`;
@@ -234,9 +222,7 @@ function populateFilters() {
   const types = [...new Set(state.events.map(e => e.type).filter(Boolean))].sort();
 
   const months = [...new Set(
-    state.events
-      .filter(e => e.dateStart)
-      .map(e => MONTH_NAMES[e.dateStart.getMonth()])
+    state.events.filter(e => e.dateStart).map(e => MONTH_NAMES[e.dateStart.getMonth()])
   )].sort((a, b) => MONTH_NAMES.indexOf(a) - MONTH_NAMES.indexOf(b));
 
   fillSelect('filter-type', types, 'Все типы');
@@ -248,8 +234,7 @@ function fillSelect(id, values, placeholder) {
   sel.innerHTML = `<option value="">${placeholder}</option>`;
   values.forEach(v => {
     const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = v;
+    opt.value = v; opt.textContent = v;
     sel.appendChild(opt);
   });
 }
@@ -280,23 +265,19 @@ function renderEvents() {
 
   const container = document.getElementById('events-container');
   if (!list.length) {
-    container.innerHTML = `<div class="no-results">
-      <span class="emoji">🔍</span>
-      <div>Ничего не найдено. Попробуйте изменить фильтры.</div>
-    </div>`;
+    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено. Попробуйте изменить фильтры.');
     return;
   }
-  container.innerHTML = list.map(cardHTML).join('');
+  container.innerHTML = list.map(eventCardHTML).join('');
 }
 
-function cardHTML(e) {
+function eventCardHTML(e) {
   const hue     = stringToHue(e.type);
   const accent  = `hsl(${hue}, 65%, 55%)`;
   const badgeBg = `hsl(${hue}, 80%, 95%)`;
   const badgeFg = `hsl(${hue}, 65%, 40%)`;
 
   const hasLink = /^https?:\/\//i.test(e.link);
-
   const titleHTML = hasLink
     ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
     : escapeHtml(e.title);
@@ -329,35 +310,75 @@ function cardHTML(e) {
 }
 
 /* ============================================================
- *  РЕНДЕР: ТАБЛИЦЫ (ГРАНТЫ, ДОПОЛНИТЕЛЬНО)
+ *  РЕНДЕР: ГРАНТЫ И ДОПОЛНИТЕЛЬНО (карточки)
  * ============================================================ */
 function renderGrants() {
   const q = document.getElementById('grant-search').value.toLowerCase().trim();
   const list = state.grants.filter(g =>
     !q || (g.name + ' ' + g.organizer).toLowerCase().includes(q)
   );
-  document.getElementById('grants-body').innerHTML = list.length
-    ? list.map(simpleRowHTML).join('')
-    : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:40px;">Ничего не найдено</td></tr>`;
+  const container = document.getElementById('grants-container');
+  if (!list.length) {
+    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
+    return;
+  }
+  container.innerHTML = list.map(g => simpleCardHTML(g, 'Грант', 145)).join('');
 }
 
 function renderExtra() {
-  document.getElementById('extra-body').innerHTML = state.extra.length
-    ? state.extra.map(simpleRowHTML).join('')
-    : `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:40px;">Пока пусто</td></tr>`;
+  const q = document.getElementById('extra-search').value.toLowerCase().trim();
+  const list = state.extra.filter(x =>
+    !q || (x.name + ' ' + x.organizer).toLowerCase().includes(q)
+  );
+  const container = document.getElementById('extra-container');
+  if (!list.length) {
+    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
+    return;
+  }
+  container.innerHTML = list.map(x => simpleCardHTML(x, 'Возможность', 270)).join('');
 }
 
-function simpleRowHTML(item) {
+function simpleCardHTML(item, badgeLabel, hue) {
+  const accent  = `hsl(${hue}, 60%, 55%)`;
+  const badgeBg = `hsl(${hue}, 75%, 95%)`;
+  const badgeFg = `hsl(${hue}, 60%, 40%)`;
+
   const hasLink = /^https?:\/\//i.test(item.link);
-  const name = hasLink
-    ? `<a href="${escapeHtml(item.link)}" target="_blank" rel="noopener"
-          style="color:var(--primary);text-decoration:none;font-weight:600;">${escapeHtml(item.name)}</a>`
+  const titleHTML = hasLink
+    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
     : escapeHtml(item.name);
-  return `<tr>
-    <td>${name}</td>
-    <td>${escapeHtml(item.deadline)}</td>
-    <td>${escapeHtml(item.organizer)}</td>
-  </tr>`;
+
+  const dd = daysUntil(item.deadlineDate);
+  let dClass = '';
+  if (item.deadlineDate) {
+    if (dd < 0) dClass = 'past';
+    else if (dd <= 7) dClass = 'urgent';
+    else if (dd <= 30) dClass = 'soon';
+  }
+  const deadlineLabel = item.deadlineRaw || 'не указан';
+  const deadlineSuffix = (item.deadlineDate && dd >= 0 && dd <= 60) ? ` · ${dd} дн.` : '';
+
+  return `
+    <article class="card" style="--card-accent:${accent}; --badge-bg:${badgeBg}; --badge-fg:${badgeFg};">
+      <div class="card-header">
+        <span class="type-badge">${escapeHtml(badgeLabel)}</span>
+      </div>
+      <h3 class="card-title">${titleHTML}</h3>
+      <div class="card-info">
+        ${item.organizer ? `<div><span class="icon">🏛</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
+      </div>
+      <div class="card-footer">
+        <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${deadlineSuffix}</span>
+        ${hasLink ? `<a class="card-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
+      </div>
+    </article>`;
+}
+
+function emptyHTML(emoji, text) {
+  return `<div class="no-results">
+    <span class="emoji">${emoji}</span>
+    <div>${text}</div>
+  </div>`;
 }
 
 /* ============================================================
@@ -366,6 +387,10 @@ function simpleRowHTML(item) {
 function showSkeletons() {
   document.getElementById('events-container').innerHTML =
     Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join('');
+  document.getElementById('grants-container').innerHTML =
+    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
+  document.getElementById('extra-container').innerHTML =
+    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
 }
 
 /* ============================================================
@@ -390,6 +415,7 @@ function bindUI() {
   });
 
   document.getElementById('grant-search').addEventListener('input', renderGrants);
+  document.getElementById('extra-search').addEventListener('input', renderExtra);
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', function () {
