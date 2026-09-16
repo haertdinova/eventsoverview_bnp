@@ -331,3 +331,24 @@ body {
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
 }
+
+/* ============================================================
+ *  ПОДСВЕТКА «НОВОЕ»
+ * ============================================================ */
+.card--highlighted {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 2px var(--card-accent),
+    0 8px 22px color-mix(in srgb, var(--card-accent) 25%, transparent);
+}
+.card--highlighted::before { opacity: 1; }
+.card--highlighted:hover {
+  box-shadow:
+    0 0 0 2px var(--card-accent),
+    0 14px 32px color-mix(in srgb, var(--card-accent) 32%, transparent);
+}
+.new-badge {
+  background: var(--card-accent) !important;
+  color: #fff !important;
+  letter-spacing: .04em;
+}
