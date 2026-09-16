@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Научные мероприятия · ФГН НИУ ВШЭ</title>
 
-  <!-- Резервный шрифт, если HSE Sans не загрузится -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -64,29 +63,24 @@
 
     <!-- Вкладка: Гранты -->
     <section id="tab-grants" class="tab-content">
-      <div class="list-toolbar">
-        <input type="search" id="grant-search" placeholder="Поиск по грантам…" />
+      <div class="filters">
+        <div class="filter filter-search">
+          <label for="grant-search">Поиск</label>
+          <input type="search" id="grant-search" placeholder="Название или организатор…" />
+        </div>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr>
-          </thead>
-          <tbody id="grants-body"></tbody>
-        </table>
-      </div>
+      <div class="cards-grid" id="grants-container"></div>
     </section>
 
     <!-- Вкладка: Дополнительно -->
     <section id="tab-extra" class="tab-content">
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr><th>Наименование</th><th>Дедлайн</th><th>Организатор</th></tr>
-          </thead>
-          <tbody id="extra-body"></tbody>
-        </table>
+      <div class="filters">
+        <div class="filter filter-search">
+          <label for="extra-search">Поиск</label>
+          <input type="search" id="extra-search" placeholder="Название или организатор…" />
+        </div>
       </div>
+      <div class="cards-grid" id="extra-container"></div>
     </section>
 
     <footer class="footer"><span id="status">Загрузка данных…</span></footer>
