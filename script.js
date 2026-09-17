@@ -14,26 +14,21 @@ const SHEET_NAMES = {
  * ============================================================ */
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
-const URGENT_DAYS = 10;    /* красный счётчик, если ≤ этого числа дней */
-const WEEK_DAYS   = 7;     /* «срочные дедлайны» в шапке */
+const URGENT_DAYS = 10;   /* красный счётчик, если ≤ этого числа дней */
+const WEEK_DAYS   = 7;    /* «срочные дедлайны» в шапке */
 
 /* ============================================================
- *  ВШЭ
+ *  ВШЭ — определение по организатору
  * ============================================================ */
 const HSE_MARKERS = [
   'ВШЭ',
   'Высшей школы экономики',
 ];
 
-function highlightHSE(organizer) {
-  if (!organizer) return '';
-  const escaped = escapeHtml(organizer);
-  const rx = new RegExp(HSE_MARKERS.map(escapeRegex).join('|'), 'gi');
-  return escaped.replace(rx, m => `<span class="org-hse">${m}</span>`);
-}
-
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function isHSEOrganizer(organizer) {
+  if (!organizer) return false;
+  const o = organizer.toLowerCase();
+  return HSE_MARKERS.some(m => o.includes(m.toLowerCase()));
 }
 
 /* Разделитель организаторов — только точка с запятой */
@@ -255,6 +250,7 @@ function normalizeEvent(row) {
     deadlineDate: parseRussianDate(deadlineS),
     type:         detectType(title),
     highlight:    hasMarker(row),
+    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
@@ -269,6 +265,7 @@ function normalizeSimple(row) {
     organizersList: splitOrganizers(organizer),
     link:         row['Ссылка на сайт'] || row['Ссылка'] || '',
     highlight:    hasMarker(row),
+    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
@@ -482,7 +479,6 @@ function renderEvents() {
 
   sortEvents(list, sortBy);
 
-  /* Счётчик найденного */
   const n = list.length;
   document.getElementById('result-count').textContent =
     n === 0 ? 'Ничего не найдено'
@@ -499,9 +495,11 @@ function renderEvents() {
 function eventCardHTML(e) {
   const c = ACCENTS.events;
   const hasLink = /^https?:\/\//i.test(e.link);
+
+  const titleClass = `card-title-link${e.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
-    : escapeHtml(e.title);
+    ? `<a class="${titleClass}" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
+    : `<span class="${e.isHSE ? 'title-hse' : ''}">${escapeHtml(e.title)}</span>`;
 
   return `
     <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
@@ -509,7 +507,7 @@ function eventCardHTML(e) {
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🏢</span><span>${highlightHSE(e.organizer)}</span></div>` : ''}
+        ${e.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(e)}
     </article>`;
@@ -550,16 +548,18 @@ function renderExtra() {
 
 function simpleCardHTML(item, c) {
   const hasLink = /^https?:\/\//i.test(item.link);
+
+  const titleClass = `card-title-link${item.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
-    : escapeHtml(item.name);
+    ? `<a class="${titleClass}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
+    : `<span class="${item.isHSE ? 'title-hse' : ''}">${escapeHtml(item.name)}</span>`;
 
   return `
     <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
       ${item.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🏢</span><span>${highlightHSE(item.organizer)}</span></div>` : ''}
+        ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(item)}
     </article>`;
