@@ -14,7 +14,8 @@ const SHEET_NAMES = {
  * ============================================================ */
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
-const URGENT_DAYS = 10;
+const URGENT_DAYS = 10;    /* красный счётчик, если ≤ этого числа дней */
+const WEEK_DAYS   = 7;     /* «срочные дедлайны» в шапке */
 
 /* ============================================================
  *  ВШЭ
@@ -35,19 +36,22 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/* ============================================================
- *  РАЗБОР ОРГАНИЗАТОРА НА ЧАСТИ
- *  Разделитель — только точка с запятой.
- *  Запятые внутри названий сохраняются как есть.
- *  «Еврейский музей и центр толерантности; ФГН НИУ ВШЭ»
- *     → ["Еврейский музей и центр толерантности", "ФГН НИУ ВШЭ"]
- * ============================================================ */
+/* Разделитель организаторов — только точка с запятой */
 function splitOrganizers(organizer) {
   if (!organizer) return [];
-  return organizer
-    .split(';')
-    .map(s => s.trim())
-    .filter(Boolean);
+  return organizer.split(';').map(s => s.trim()).filter(Boolean);
+}
+
+/* ============================================================
+ *  СКЛОНЕНИЯ
+ * ============================================================ */
+function plural(n, one, few, many) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
 }
 
 /* ============================================================
@@ -224,6 +228,7 @@ function detectType(title) {
  * ============================================================ */
 const state = {
   events: [], grants: [], extra: [],
+  showOnlyNew: false,
 };
 
 /* ============================================================
@@ -262,7 +267,7 @@ function normalizeSimple(row) {
     deadlineDate: parseRussianDate(deadlineS),
     organizer,
     organizersList: splitOrganizers(organizer),
-    link:         row['Ссылка'] || '',
+    link:         row['Ссылка на сайт'] || row['Ссылка'] || '',
     highlight:    hasMarker(row),
   };
 }
@@ -301,7 +306,9 @@ async function loadAll() {
     state.extra  = ex.map(normalizeSimple);
 
     updateCounters();
+    updateHeroStats();
     populateFilters();
+    populateOrganizerDatalist();
     renderEvents();
     renderGrants();
     renderExtra();
@@ -330,6 +337,39 @@ function updateCounters() {
 }
 
 /* ============================================================
+ *  СТАТИСТИКА В ШАПКЕ
+ * ============================================================ */
+function updateHeroStats() {
+  const eventsCount = state.events.filter(e => !isExpiredEvent(e)).length;
+  const grantsCount = state.grants.filter(g => !isExpiredSimple(g)).length;
+  const extraCount  = state.extra.filter(x => !isExpiredSimple(x)).length;
+
+  const allActual = [
+    ...state.events.filter(e => !isExpiredEvent(e)),
+    ...state.grants.filter(g => !isExpiredSimple(g)),
+    ...state.extra.filter(x => !isExpiredSimple(x)),
+  ];
+  const urgentCount = allActual.filter(item => {
+    const dd = daysUntil(item.deadlineDate);
+    return dd >= 0 && dd <= WEEK_DAYS;
+  }).length;
+
+  const parts = [
+    `${eventsCount} ${plural(eventsCount, 'мероприятие', 'мероприятия', 'мероприятий')}`,
+    `${grantsCount} ${plural(grantsCount, 'грант', 'гранта', 'грантов')}`,
+    `${extraCount} ${plural(extraCount, 'возможность', 'возможности', 'возможностей')}`,
+  ];
+  if (urgentCount > 0) {
+    parts.push(
+      `<strong>${urgentCount} ${plural(urgentCount, 'срочный дедлайн', 'срочных дедлайна', 'срочных дедлайнов')}</strong>`
+    );
+  }
+
+  document.getElementById('hero-stats').innerHTML =
+    parts.join('<span class="sep">·</span>');
+}
+
+/* ============================================================
  *  ФИЛЬТРЫ
  * ============================================================ */
 function populateFilters() {
@@ -345,16 +385,22 @@ function populateFilters() {
     .sort((a, b) => a - b)
     .map(idx => MONTH_NAMES_NOM[idx]);
 
-  /* Все организации из всех мероприятий — с разбивкой по ; */
+  fillSelect('filter-type', types, 'Все типы');
+  fillSelect('filter-month', months, 'Все месяцы');
+}
+
+function populateOrganizerDatalist() {
+  const actualEvents = state.events.filter(e => !isExpiredEvent(e));
   const orgSet = new Set();
   actualEvents.forEach(e => {
     (e.organizersList || []).forEach(o => orgSet.add(o));
   });
   const organizers = [...orgSet].sort((a, b) => a.localeCompare(b, 'ru'));
 
-  fillSelect('filter-type', types, 'Все типы');
-  fillSelect('filter-month', months, 'Все месяцы');
-  fillSelect('filter-organizer', organizers, 'Все организаторы');
+  const datalist = document.getElementById('organizers-list');
+  datalist.innerHTML = organizers
+    .map(o => `<option value="${escapeHtml(o)}"></option>`)
+    .join('');
 }
 
 function fillSelect(id, values, placeholder) {
@@ -411,14 +457,18 @@ function sortEvents(list, mode) {
 function renderEvents() {
   const type      = document.getElementById('filter-type').value;
   const month     = document.getElementById('filter-month').value;
-  const organizer = document.getElementById('filter-organizer').value;
+  const organizer = document.getElementById('filter-organizer').value.trim().toLowerCase();
   const sortBy    = document.getElementById('sort-by').value;
   const q         = document.getElementById('filter-search').value.toLowerCase().trim();
 
   let list = state.events.filter(e => {
     if (isExpiredEvent(e)) return false;
+    if (state.showOnlyNew && !e.highlight) return false;
     if (type && e.type !== type) return false;
-    if (organizer && !(e.organizersList || []).includes(organizer)) return false;
+    if (organizer) {
+      const match = (e.organizersList || []).some(o => o.toLowerCase().includes(organizer));
+      if (!match) return false;
+    }
     if (month) {
       if (!e.dateStart) return false;
       if (MONTH_NAMES_NOM[e.dateStart.getMonth()] !== month) return false;
@@ -431,6 +481,12 @@ function renderEvents() {
   });
 
   sortEvents(list, sortBy);
+
+  /* Счётчик найденного */
+  const n = list.length;
+  document.getElementById('result-count').textContent =
+    n === 0 ? 'Ничего не найдено'
+            : `Найдено: ${n} ${plural(n, 'мероприятие', 'мероприятия', 'мероприятий')}`;
 
   const container = document.getElementById('events-container');
   if (!list.length) {
@@ -549,13 +605,22 @@ function emptyHTML(emoji, text) {
 /* ============================================================
  *  СКЕЛЕТОНЫ
  * ============================================================ */
+function skeletonCard() {
+  return `<div class="skeleton-card">
+    <div class="skeleton-line" style="width:55%"></div>
+    <div class="skeleton-line" style="width:95%"></div>
+    <div class="skeleton-line" style="width:80%"></div>
+    <div class="skeleton-line" style="width:40%; margin-top:auto;"></div>
+  </div>`;
+}
+
 function showSkeletons() {
   document.getElementById('events-container').innerHTML =
-    Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join('');
+    Array.from({ length: 6 }, skeletonCard).join('');
   document.getElementById('grants-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
+    Array.from({ length: 3 }, skeletonCard).join('');
   document.getElementById('extra-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
+    Array.from({ length: 3 }, skeletonCard).join('');
 }
 
 /* ============================================================
@@ -571,7 +636,22 @@ function bindUI() {
     ['filter-type', 'filter-month', 'filter-organizer', 'filter-search']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('sort-by').value = 'date-asc';
+    state.showOnlyNew = false;
+    document.getElementById('filter-new-only').classList.remove('active');
     renderEvents();
+  });
+
+  /* Только новое */
+  document.getElementById('filter-new-only').addEventListener('click', function () {
+    state.showOnlyNew = !state.showOnlyNew;
+    this.classList.toggle('active', state.showOnlyNew);
+    renderEvents();
+  });
+
+  /* Свёрнутые фильтры на мобильных */
+  document.getElementById('filters-toggle').addEventListener('click', function () {
+    document.getElementById('filters-events').classList.toggle('open');
+    this.classList.toggle('open');
   });
 
   document.getElementById('grant-search').addEventListener('input', renderGrants);
