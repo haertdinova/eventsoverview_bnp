@@ -299,7 +299,7 @@ function eventCardHTML(e) {
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🏛</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
+        ${e.organizer ? `<div><span class="icon">🎓</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(e)}
     </article>`;
@@ -348,7 +348,7 @@ function simpleCardHTML(item, badgeLabel, c) {
       </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🏛</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
+        ${item.organizer ? `<div><span class="icon">🎓</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(item)}
     </article>`;
