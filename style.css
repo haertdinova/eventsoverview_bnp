@@ -33,7 +33,7 @@
 }
 
 /* ============================================================
- *  ПЕРЕМЕННЫЕ — корпоративная палитра НИУ ВШЭ
+ *  ПЕРЕМЕННЫЕ
  * ============================================================ */
 :root {
   --font: 'HSE Sans', 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -97,7 +97,7 @@ body {
 }
 
 /* ============================================================
- *  TABS
+ *  TABS — три разных цвета
  * ============================================================ */
 .tabs {
   display: flex; gap: 4px; padding: 4px;
@@ -116,20 +116,19 @@ body {
 }
 .tab-btn:hover { color: var(--text); background: var(--primary-light); }
 
-/* Каждая активная вкладка — свой оттенок синего */
 .tab-btn.active[data-tab="events"] {
   background: #102D69; color: #fff;
   box-shadow: 0 5px 14px rgba(16,45,105,.28);
 }
 .tab-btn.active[data-tab="grants"] {
-  background: #2A6FDB; color: #fff;
-  box-shadow: 0 5px 14px rgba(42,111,219,.28);
+  background: #0E7C66; color: #fff;
+  box-shadow: 0 5px 14px rgba(14,124,102,.28);
 }
 .tab-btn.active[data-tab="extra"] {
-  background: #5A8FD4; color: #fff;
-  box-shadow: 0 5px 14px rgba(90,143,212,.28);
+  background: #C75B12; color: #fff;
+  box-shadow: 0 5px 14px rgba(199,91,18,.28);
 }
-.tab-btn.active:hover { filter: brightness(1.05); }
+.tab-btn.active:hover { filter: brightness(1.06); }
 
 .tab-count {
   display: inline-flex; align-items: center; justify-content: center;
