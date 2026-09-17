@@ -212,7 +212,7 @@ body {
 .card {
   position: relative; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px 18px 14px;
+  padding: 18px 18px 14px;
   display: flex; flex-direction: column;
   transition: var(--t); overflow: hidden;
 }
@@ -228,30 +228,15 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
-/* Шапка карточки — ВСЕГДА занимает одно и то же место,
- * даже если в ней нет плашки. Это выравнивает карточки в ряду. */
-.card-header {
-  display: flex; align-items: center; gap: 8px;
-  height: 24px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-.type-badge {
-  display: inline-flex; align-items: center;
-  padding: 3px 11px;
-  font-size: .74rem; font-weight: 600;
-  border-radius: var(--radius-pill);
-  background: var(--badge-bg, var(--primary-light));
-  color: var(--badge-fg, var(--primary));
-  letter-spacing: .02em;
-}
-
-/* Заголовок: всегда минимум 2 строки */
+/* Заголовок — минимум 2 строки, чтобы карточки выравнивались */
 .card-title {
   font-size: 1.05rem; font-weight: 700; line-height: 1.35;
   letter-spacing: -.005em;
   margin-bottom: 10px;
   min-height: calc(1.05rem * 1.35 * 2);
+  /* Оставляем место справа под плашку, если она есть — но так как
+     плашка absolute, заголовку просто чуть-чуть отступ справа */
+  padding-right: 8px;
 }
 .card-title-link {
   color: inherit;
@@ -265,6 +250,25 @@ body {
 .card-title-link:hover {
   color: var(--card-accent, var(--primary));
   background-size: 100% 1px;
+}
+
+/* Плашка «Новое» — висит в правом верхнем углу, не занимает поток */
+.new-badge {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: inline-flex; align-items: center;
+  padding: 3px 10px;
+  font-size: .7rem; font-weight: 700;
+  border-radius: var(--radius-pill);
+  background: var(--card-accent, var(--primary));
+  color: #fff;
+  letter-spacing: .04em;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 35%, transparent);
+  z-index: 1;
+}
+/* Если плашка есть, заголовку даём отступ справа, чтобы не налезала */
+.card--highlighted .card-title {
+  padding-right: 68px;
 }
 
 .card-info {
@@ -312,11 +316,6 @@ body {
     0 0 0 2px var(--card-accent),
     0 14px 32px color-mix(in srgb, var(--card-accent) 30%, transparent);
 }
-.new-badge {
-  background: var(--card-accent) !important;
-  color: #fff !important;
-  letter-spacing: .04em;
-}
 
 /* ============================================================
  *  EMPTY / LOADING
@@ -363,5 +362,9 @@ body {
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
   .card-title { min-height: 0; }
-  .card-header { height: auto; min-height: 24px; }
+  .card--highlighted .card-title { padding-right: 0; }
+  .new-badge {
+    position: static;
+    margin-bottom: 8px;
+  }
 }
