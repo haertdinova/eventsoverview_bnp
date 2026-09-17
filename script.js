@@ -337,7 +337,7 @@ async function loadAll() {
     renderExtra();
 
     document.getElementById('status').textContent =
-      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
+      `Данные актуальны на ${new Date().toLocaleString('ru-RU')}`;
   } catch (err) {
     console.error(err);
     document.getElementById('events-container').innerHTML =
