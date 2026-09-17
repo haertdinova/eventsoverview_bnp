@@ -201,7 +201,7 @@ body {
 .btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
- *  CARDS — выровненные по высоте
+ *  CARDS
  * ============================================================ */
 .cards-grid {
   display: grid;
@@ -228,19 +228,25 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
+/* Шапка карточки — ВСЕГДА занимает одно и то же место,
+ * даже если в ней нет плашки. Это выравнивает карточки в ряду. */
 .card-header {
   display: flex; align-items: center; gap: 8px;
-  margin-bottom: 8px; flex-wrap: wrap;
+  height: 24px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 .type-badge {
-  display: inline-flex; align-items: center; padding: 3px 11px;
-  font-size: .74rem; font-weight: 600; border-radius: var(--radius-pill);
+  display: inline-flex; align-items: center;
+  padding: 3px 11px;
+  font-size: .74rem; font-weight: 600;
+  border-radius: var(--radius-pill);
   background: var(--badge-bg, var(--primary-light));
   color: var(--badge-fg, var(--primary));
   letter-spacing: .02em;
 }
 
-/* Заголовок: всегда минимум 2 строки — карточки в ряду выравниваются */
+/* Заголовок: всегда минимум 2 строки */
 .card-title {
   font-size: 1.05rem; font-weight: 700; line-height: 1.35;
   letter-spacing: -.005em;
@@ -269,7 +275,6 @@ body {
 .card-info > div { display: flex; align-items: flex-start; gap: 8px; line-height: 1.45; }
 .card-info .icon { flex-shrink: 0; width: 18px; text-align: center; opacity: .7; font-size: 1em; }
 
-/* Футер прижат к низу — дедлайны во всех карточках на одной линии */
 .card-footer {
   margin-top: auto;
   padding-top: 12px;
@@ -357,5 +362,6 @@ body {
   .btn-ghost, .btn-sort { width: 100%; }
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
-  .card-title { min-height: 0; }   /* на телефоне — по контенту */
+  .card-title { min-height: 0; }
+  .card-header { height: auto; min-height: 24px; }
 }
