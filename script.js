@@ -23,7 +23,6 @@ const WEEK_DAYS   = 7;
 const HSE_MARKERS = [
   'ВШЭ',
   'Высшей школы экономики',
-  'Высшая школа экономики',
 ];
 
 function isHSEOrganizer(organizer) {
@@ -199,10 +198,8 @@ function normalizeQuotes(str) {
   if (str == null) return '';
   let s = String(str);
 
-  /* Унифицируем все варианты двойных кавычек к прямому символу */
   s = s.replace(/[«»""„"‟″]/g, '"');
 
-  /* Чередуем пары: 1 — ёлочки, 2 — лапки, 3 — снова ёлочки, 4 — снова лапки… */
   const pairs = [
     ['«', '»'],
     ['„', '"'],
@@ -256,7 +253,13 @@ const state = {
  *  НОРМАЛИЗАЦИЯ
  * ============================================================ */
 function hasMarker(row) {
-  return !!(row['Новое'] || '').trim();
+  for (const key in row) {
+    const normalized = key.trim().toLowerCase();
+    if (normalized === 'метка' || normalized === 'новое') {
+      if (String(row[key] || '').trim() !== '') return true;
+    }
+  }
+  return false;
 }
 
 function normalizeEvent(row) {
@@ -337,7 +340,7 @@ async function loadAll() {
     renderExtra();
 
     document.getElementById('status').textContent =
-      `Данные актуальны на ${new Date().toLocaleString('ru-RU')}`;
+      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
   } catch (err) {
     console.error(err);
     document.getElementById('events-container').innerHTML =
@@ -398,17 +401,26 @@ function updateHeroStats() {
 function populateFilters() {
   const actualEvents = state.events.filter(e => !isExpiredEvent(e));
 
+  /* Типы */
   const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ru'));
 
-  const monthIdxSet = new Set(
-    actualEvents.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
-  );
-  const months = [...monthIdxSet]
-    .sort((a, b) => a - b)
-    .map(idx => MONTH_NAMES_NOM[idx]);
+  /* Месяцы — с годом, уникальные, отсортированные по календарю */
+  const monthSet = new Map(); /* key: "YYYY-MM" → label: "Октябрь 2026" */
+  actualEvents.forEach(e => {
+    if (!e.dateStart) return;
+    const y = e.dateStart.getFullYear();
+    const m = e.dateStart.getMonth();
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    if (!monthSet.has(key)) {
+      monthSet.set(key, `${MONTH_NAMES_NOM[m]} ${y}`);
+    }
+  });
+  const months = [...monthSet.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([, label]) => label);
 
-  fillSelect('filter-type', types, 'Все типы');
+  fillSelect('filter-type',  types,  'Все типы');
   fillSelect('filter-month', months, 'Все месяцы');
 }
 
@@ -479,10 +491,18 @@ function sortEvents(list, mode) {
  * ============================================================ */
 function renderEvents() {
   const type      = document.getElementById('filter-type').value;
-  const month     = document.getElementById('filter-month').value;
+  const month     = document.getElementById('filter-month').value;   /* "Октябрь 2026" */
   const organizer = document.getElementById('filter-organizer').value.trim().toLowerCase();
   const sortBy    = document.getElementById('sort-by').value;
   const q         = document.getElementById('filter-search').value.toLowerCase().trim();
+
+  /* Разбираем "Октябрь 2026" на компоненты для сравнения */
+  let monthLabel = null, monthYear = null;
+  if (month) {
+    const parts = month.split(' ');
+    monthYear = +parts[parts.length - 1];
+    monthLabel = parts.slice(0, -1).join(' ');
+  }
 
   let list = state.events.filter(e => {
     if (isExpiredEvent(e)) return false;
@@ -494,7 +514,8 @@ function renderEvents() {
     }
     if (month) {
       if (!e.dateStart) return false;
-      if (MONTH_NAMES_NOM[e.dateStart.getMonth()] !== month) return false;
+      if (e.dateStart.getFullYear() !== monthYear) return false;
+      if (MONTH_NAMES_NOM[e.dateStart.getMonth()] !== monthLabel) return false;
     }
     if (q) {
       const hay = [e.title, e.organizer, e.dateRaw].join(' ').toLowerCase();
