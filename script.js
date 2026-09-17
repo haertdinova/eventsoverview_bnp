@@ -360,18 +360,31 @@ function simpleCardHTML(item, badgeLabel, c) {
 function deadlineBlock(item) {
   const dd = daysUntil(item.deadlineDate);
   let dClass = '';
+  let suffix = '';
+
   if (item.deadlineDate) {
-    if (dd < 0) dClass = 'past';
-    else if (dd <= 7) dClass = 'urgent';
-    else if (dd <= 30) dClass = 'soon';
+    if (dd < 0) {
+      dClass = 'past';
+      suffix = ' · просрочен';
+    } else if (dd === 0) {
+      dClass = 'urgent';
+      suffix = ' · сегодня';
+    } else if (dd === 1) {
+      dClass = 'urgent';
+      suffix = ' · завтра';
+    } else {
+      if (dd <= 7) dClass = 'urgent';
+      else if (dd <= 30) dClass = 'soon';
+      suffix = ` · через ${dd} дн.`;
+    }
   }
+
   const deadlineLabel = item.deadlineRaw || 'не указан';
-  const deadlineSuffix = (item.deadlineDate && dd >= 0 && dd <= 60) ? ` · ${dd} дн.` : '';
   const hasLink = /^https?:\/\//i.test(item.link || '');
 
   return `
     <div class="card-footer">
-      <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${deadlineSuffix}</span>
+      <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${suffix}</span>
       ${hasLink ? `<a class="card-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
     </div>`;
 }
