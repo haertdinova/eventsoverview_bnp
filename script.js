@@ -10,12 +10,26 @@ const SHEET_NAMES = {
 };
 
 /* ============================================================
+ *  НАСТРОЙКИ ПОВЕДЕНИЯ
+ * ============================================================ */
+/* Скрывать ли то, у чего дедлайн подачи уже прошёл.
+ * Применяется ко всем трём вкладкам.                      */
+const HIDE_EXPIRED = true;
+
+/* Что считать «прошедшим» у мероприятия, если дедлайн не указан:
+ *   'event'    — ориентироваться на дату самого мероприятия
+ *                (мероприятие закончилось → скрываем);
+ *   'never'    — если дедлайна нет, не скрывать никогда.
+ * По умолчанию: у мероприятия с пустым дедлайном смотрим на дату. */
+const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
+
+/* ============================================================
  *  ЦВЕТА РАЗДЕЛОВ
  * ============================================================ */
 const ACCENTS = {
-  events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' }, /* тёмно-синий */
-  grants: { accent: '#0E7C66', bg: '#E6F4F0', fg: '#0A5C4B' }, /* изумруд */
-  extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' }, /* терракота */
+  events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' },
+  grants: { accent: '#0E7C66', bg: '#E6F4F0', fg: '#0A5C4B' },
+  extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' },
 };
 
 function applyTabTheme(tab) {
@@ -86,6 +100,7 @@ const MONTH_NAMES_NOM = [
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
 
+/* Первая дата в строке */
 function parseRussianDate(str) {
   if (!str) return null;
   const s = String(str).trim();
@@ -114,11 +129,46 @@ function parseRussianDate(str) {
   return null;
 }
 
+/* Последняя (самая поздняя) дата в строке — для диапазонов
+ * вида «10–11 сентября» или «30 сентября – 2 октября»         */
+function parseLastRussianDate(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  if (!s) return null;
+
+  const lower = s.toLowerCase();
+  const yearM = lower.match(/(\d{4})/);
+  const year = yearM ? +yearM[1] : new Date().getFullYear();
+
+  let latest = null;
+  for (const [stem, monthIdx] of MONTH_STEMS) {
+    let pos = 0, found;
+    while ((found = lower.indexOf(stem, pos)) !== -1) {
+      const before = lower.slice(0, found);
+      const dm = before.match(/(\d{1,2})[^\d]*$/);
+      const day = dm ? +dm[1] : 1;
+      const d = new Date(year, monthIdx, day);
+      if (!latest || d > latest) latest = d;
+      pos = found + stem.length;
+    }
+  }
+  return latest;
+}
+
 function daysUntil(date) {
   if (!date) return Infinity;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.round((date - today) / 86400000);
+}
+
+/* Прошла ли дата (строго до сегодняшнего дня).
+ * Если дата не указана — не считаем прошедшей. */
+function isPastDate(date) {
+  if (!date) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
 }
 
 function escapeHtml(s) {
@@ -127,8 +177,7 @@ function escapeHtml(s) {
 }
 
 /* ============================================================
- *  ОПРЕДЕЛЕНИЕ ТИПА — оставлено, но используется ТОЛЬКО
- *  для фильтра «Тип», а не для бейджей
+ *  ОПРЕДЕЛЕНИЕ ТИПА — только для фильтра «Тип»
  * ============================================================ */
 const TYPE_KEYWORDS = [
   ['конференц',    'Конференция'],
@@ -172,6 +221,7 @@ function normalizeEvent(row) {
     link:         row['Ссылка на сайт'] || '',
     dateRaw:      dateStr,
     dateStart:    parseRussianDate(dateStr),
+    dateEnd:      parseLastRussianDate(dateStr),
     organizer:    row['Организатор'] || '',
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
@@ -193,6 +243,27 @@ function normalizeSimple(row) {
 }
 
 /* ============================================================
+ *  ПРАВИЛО «ПРОШЛО ИЛИ НЕТ»
+ * ============================================================ */
+function isExpiredEvent(e) {
+  if (!HIDE_EXPIRED) return false;
+  /* Приоритет — дедлайн подачи */
+  if (e.deadlineDate) return isPastDate(e.deadlineDate);
+  /* Дедлайна нет — смотрим на дату мероприятия (по настройке) */
+  if (FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE === 'event') {
+    return isPastDate(e.dateEnd || e.dateStart);
+  }
+  return false;
+}
+
+function isExpiredSimple(item) {
+  if (!HIDE_EXPIRED) return false;
+  /* У грантов и «Дополнительно» ориентир только на дедлайн.
+   * Нет дедлайна — считаем актуальным. */
+  return isPastDate(item.deadlineDate);
+}
+
+/* ============================================================
  *  ЗАГРУЗКА
  * ============================================================ */
 async function loadAll() {
@@ -208,10 +279,7 @@ async function loadAll() {
     state.grants = gr.map(normalizeSimple);
     state.extra  = ex.map(normalizeSimple);
 
-    document.getElementById('count-events').textContent = state.events.length;
-    document.getElementById('count-grants').textContent = state.grants.length;
-    document.getElementById('count-extra').textContent  = state.extra.length;
-
+    updateCounters();
     populateFilters();
     renderEvents();
     renderGrants();
@@ -231,14 +299,29 @@ async function loadAll() {
   }
 }
 
+/* Счётчики на вкладках — только актуальные позиции */
+function updateCounters() {
+  const eventsActual = state.events.filter(e => !isExpiredEvent(e)).length;
+  const grantsActual = state.grants.filter(g => !isExpiredSimple(g)).length;
+  const extraActual  = state.extra.filter(x => !isExpiredSimple(x)).length;
+
+  document.getElementById('count-events').textContent = eventsActual;
+  document.getElementById('count-grants').textContent = grantsActual;
+  document.getElementById('count-extra').textContent  = extraActual;
+}
+
 /* ============================================================
  *  ФИЛЬТРЫ
  * ============================================================ */
 function populateFilters() {
-  const types = [...new Set(state.events.map(e => e.type).filter(Boolean))].sort();
+  /* Тип и месяц строим по актуальным мероприятиям,
+   * чтобы в фильтре не было типов, которых больше не видно. */
+  const actualEvents = state.events.filter(e => !isExpiredEvent(e));
+
+  const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))].sort();
 
   const monthIdxSet = new Set(
-    state.events.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
+    actualEvents.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
   );
   const months = [...monthIdxSet]
     .sort((a, b) => a - b)
@@ -260,8 +343,6 @@ function fillSelect(id, values, placeholder) {
 
 /* ============================================================
  *  РЕНДЕР: МЕРОПРИЯТИЯ
- *  Без бейджа типа — он дублирует название.
- *  «Новое» остаётся для подсвеченных карточек.
  * ============================================================ */
 function renderEvents() {
   const type  = document.getElementById('filter-type').value;
@@ -269,6 +350,9 @@ function renderEvents() {
   const q     = document.getElementById('filter-search').value.toLowerCase().trim();
 
   let list = state.events.filter(e => {
+    /* Прячем то, у чего дедлайн прошёл */
+    if (isExpiredEvent(e)) return false;
+
     if (type && e.type !== type) return false;
     if (month) {
       if (!e.dateStart) return false;
@@ -281,6 +365,7 @@ function renderEvents() {
     return true;
   });
 
+  /* Сортировка по дате проведения — независимо от порядка в таблице */
   list.sort((a, b) => {
     const da = a.dateStart ? a.dateStart.getTime() : Infinity;
     const db = b.dateStart ? b.dateStart.getTime() : Infinity;
@@ -323,9 +408,11 @@ function eventCardHTML(e) {
  * ============================================================ */
 function renderGrants() {
   const q = document.getElementById('grant-search').value.toLowerCase().trim();
-  const list = state.grants.filter(g =>
-    !q || (g.name + ' ' + g.organizer).toLowerCase().includes(q)
-  );
+  const list = state.grants.filter(g => {
+    if (isExpiredSimple(g)) return false;
+    if (q && !(g.name + ' ' + g.organizer).toLowerCase().includes(q)) return false;
+    return true;
+  });
   const container = document.getElementById('grants-container');
   if (!list.length) {
     container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
@@ -336,9 +423,11 @@ function renderGrants() {
 
 function renderExtra() {
   const q = document.getElementById('extra-search').value.toLowerCase().trim();
-  const list = state.extra.filter(x =>
-    !q || (x.name + ' ' + x.organizer).toLowerCase().includes(q)
-  );
+  const list = state.extra.filter(x => {
+    if (isExpiredSimple(x)) return false;
+    if (q && !(x.name + ' ' + x.organizer).toLowerCase().includes(q)) return false;
+    return true;
+  });
   const container = document.getElementById('extra-container');
   if (!list.length) {
     container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
