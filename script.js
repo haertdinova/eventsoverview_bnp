@@ -202,24 +202,24 @@ function isPastDate(date) {
   return date < today;
 }
 
-/* Приводит все виды двойных кавычек к типографским:
- * 1-й уровень — «ёлочки», 2-й — „лапки", 3-й — снова «ёлочки» и т. д. */
 function normalizeQuotes(str) {
   if (str == null) return '';
   let s = String(str);
 
+  /* Если строка начинается с «ёлочки» — автор расставил кавычки сам, не трогаем */
+  if (s.trimStart().startsWith('«')) return s;
+
+  /* Иначе — унифицируем все виды кавычек к прямому символу */
   s = s.replace(/[«»""„"‟″]/g, '"');
 
-  const pairs = [
-    ['«', '»'],
-    ['„', '"'],
-  ];
+  /* И расставляем парами: 1-я « », 2-я „ ", 3-я « », 4-я „ " ... */
   let idx = 0;
   s = s.replace(/"/g, () => {
-    const pair = pairs[Math.floor(idx / 2) % pairs.length];
-    const ch = idx % 2 === 0 ? pair[0] : pair[1];
+    const level = Math.floor(idx / 2);
+    const isOpen = idx % 2 === 0;
     idx++;
-    return ch;
+    const style = level % 2 === 0 ? ['«', '»'] : ['„', '"'];
+    return isOpen ? style[0] : style[1];
   });
   return s;
 }
