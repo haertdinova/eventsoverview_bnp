@@ -86,7 +86,7 @@ body {
 .container { max-width: 1340px; margin: 0 auto; }
 
 /* ============================================================
- *  HERO — цвет заголовка меняется вместе с вкладкой
+ *  HERO
  * ============================================================ */
 .hero { margin-bottom: 18px; }
 .hero h1 {
@@ -152,7 +152,7 @@ body {
 }
 
 /* ============================================================
- *  FILTERS — рамки и фокус в цвете вкладки
+ *  FILTERS
  * ============================================================ */
 .filters {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
@@ -202,12 +202,13 @@ body {
 .btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
- *  CARDS
+ *  CARDS — вариант A: карточки по своей высоте
  * ============================================================ */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 14px;
+  align-items: start;   /* карточки не тянутся до высоты соседа */
 }
 .card {
   position: relative; background: var(--surface);
@@ -259,13 +260,15 @@ body {
 
 .card-info {
   display: flex; flex-direction: column; gap: 5px;
-  font-size: .9rem; color: var(--text-muted); margin-bottom: 10px;
+  font-size: .9rem; color: var(--text-muted); margin-bottom: 0;
 }
 .card-info > div { display: flex; align-items: flex-start; gap: 8px; line-height: 1.45; }
 .card-info .icon { flex-shrink: 0; width: 18px; text-align: center; opacity: .7; font-size: 1em; }
 
+/* Футер идёт СРАЗУ за контентом, без растяжения */
 .card-footer {
-  margin-top: auto; padding-top: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed var(--border);
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px; flex-wrap: wrap;
@@ -320,7 +323,7 @@ body {
   background: linear-gradient(90deg, #EDF0F5 25%, #E0E4EB 37%, #EDF0F5 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: var(--radius); height: 190px;
+  border-radius: var(--radius); height: 150px;
 }
 @keyframes shimmer {
   0%   { background-position: 100% 50%; }
