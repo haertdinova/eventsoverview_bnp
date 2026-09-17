@@ -54,6 +54,8 @@
   --text-muted: #5A6474;
   --text-soft: #8B95A8;
 
+  --hse: #102D69;   /* корпоративный цвет ВШЭ для маркера */
+
   --radius: 16px;
   --radius-sm: 10px;
   --radius-pill: 999px;
@@ -229,6 +231,14 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
+/* Мероприятие ВШЭ: тонкая полоса слева в фирменном синем */
+.card--hse {
+  border-left: 4px solid var(--hse);
+}
+.card--hse:hover {
+  border-left-color: var(--hse);
+}
+
 .card-title {
   font-size: 1rem; font-weight: 700; line-height: 1.35;
   letter-spacing: -.005em;
@@ -237,6 +247,7 @@ body {
   overflow-wrap: break-word;
 }
 .card--highlighted .card-title { padding-right: 76px; }
+.card--hse.card--highlighted .card-title { padding-right: 134px; }
 
 .card-title-link {
   color: inherit;
@@ -254,18 +265,26 @@ body {
   background-size: 100% 1px;
 }
 
-.new-badge {
+/* Контейнер бейджей в правом верхнем углу */
+.card-badges {
   position: absolute;
   top: 12px; right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 1;
+}
+.new-badge,
+.hse-badge {
   display: inline-flex; align-items: center;
   padding: 3px 10px;
   font-size: .7rem; font-weight: 700;
   border-radius: var(--radius-pill);
-  background: var(--card-accent, var(--primary));
   color: #fff;
   letter-spacing: .04em;
-  z-index: 1;
+  white-space: nowrap;
 }
+.new-badge { background: var(--card-accent, var(--primary)); }
+.hse-badge { background: var(--hse); }
 
 .card-info {
   display: flex; flex-direction: column;
@@ -294,10 +313,7 @@ body {
 }
 
 /* ============================================================
- *  ДЕДЛАЙН — «Приём заявок до», срочность цветом
- *  calm (зелёный) > 30 дней
- *  soon (жёлтый)  11–30 дней
- *  urgent (красный) ≤ 10 дней / завтра / сегодня
+ *  ДЕДЛАЙН
  * ============================================================ */
 .deadline {
   display: inline-flex; align-items: center; gap: 6px;
@@ -314,6 +330,10 @@ body {
 }
 .deadline-date.muted {
   color: var(--text-soft);
+}
+.deadline-sep {
+  color: var(--text-soft);
+  padding: 0 2px;
 }
 .deadline-when {
   font-weight: 700;
@@ -381,7 +401,8 @@ body {
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
   .card--highlighted .card-title { padding-right: 0; }
-  .new-badge {
+  .card--hse.card--highlighted .card-title { padding-right: 0; }
+  .card-badges {
     position: static;
     margin-bottom: 8px;
   }
