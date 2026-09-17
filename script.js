@@ -14,11 +14,11 @@ const SHEET_NAMES = {
  * ============================================================ */
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
-const URGENT_DAYS = 10;   /* красный счётчик, если ≤ этого числа дней */
-const WEEK_DAYS   = 7;    /* «срочные дедлайны» в шапке */
+const URGENT_DAYS = 10;
+const WEEK_DAYS   = 7;
 
 /* ============================================================
- *  ВШЭ — определение по организатору
+ *  ВШЭ
  * ============================================================ */
 const HSE_MARKERS = [
   'ВШЭ',
@@ -31,7 +31,6 @@ function isHSEOrganizer(organizer) {
   return HSE_MARKERS.some(m => o.includes(m.toLowerCase()));
 }
 
-/* Разделитель организаторов — только точка с запятой */
 function splitOrganizers(organizer) {
   if (!organizer) return [];
   return organizer.split(';').map(s => s.trim()).filter(Boolean);
@@ -51,11 +50,13 @@ function plural(n, one, few, many) {
 
 /* ============================================================
  *  ЦВЕТА РАЗДЕЛОВ
+ *  accent — активная вкладка и подсветка карточек
+ *  bg     — фон страницы
  * ============================================================ */
 const ACCENTS = {
-  events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' },
-  grants: { accent: '#0E7C66', bg: '#E6F4F0', fg: '#0A5C4B' },
-  extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' },
+  events: { accent: '#102D69', bg: '#EDF1F9', fg: '#0A1F4A' },
+  grants: { accent: '#0E7C66', bg: '#ECF5EF', fg: '#0A5C4B' },
+  extra:  { accent: '#C75B12', bg: '#FAF0E6', fg: '#9C4409' },
 };
 
 function applyTabTheme(tab) {
@@ -63,8 +64,9 @@ function applyTabTheme(tab) {
   if (!c) return;
   const root = document.documentElement;
   root.style.setProperty('--tab-accent', c.accent);
-  root.style.setProperty('--tab-bg', c.bg);
-  root.style.setProperty('--tab-fg', c.fg);
+  root.style.setProperty('--tab-bg',     c.bg);
+  root.style.setProperty('--tab-fg',     c.fg);
+  root.style.setProperty('--bg',         c.bg);
 }
 
 /* ============================================================
@@ -641,14 +643,12 @@ function bindUI() {
     renderEvents();
   });
 
-  /* Только новое */
   document.getElementById('filter-new-only').addEventListener('click', function () {
     state.showOnlyNew = !state.showOnlyNew;
     this.classList.toggle('active', state.showOnlyNew);
     renderEvents();
   });
 
-  /* Свёрнутые фильтры на мобильных */
   document.getElementById('filters-toggle').addEventListener('click', function () {
     document.getElementById('filters-events').classList.toggle('open');
     this.classList.toggle('open');
