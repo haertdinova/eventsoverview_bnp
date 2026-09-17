@@ -10,13 +10,23 @@ const SHEET_NAMES = {
 };
 
 /* ============================================================
- *  ЦВЕТА РАЗДЕЛОВ — три независимых цвета
+ *  ЦВЕТА РАЗДЕЛОВ
  * ============================================================ */
 const ACCENTS = {
   events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' }, /* тёмно-синий */
   grants: { accent: '#0E7C66', bg: '#E6F4F0', fg: '#0A5C4B' }, /* изумруд */
   extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' }, /* терракота */
 };
+
+/* Ставит CSS-переменные темы в соответствии с активной вкладкой */
+function applyTabTheme(tab) {
+  const c = ACCENTS[tab];
+  if (!c) return;
+  const root = document.documentElement;
+  root.style.setProperty('--tab-accent', c.accent);
+  root.style.setProperty('--tab-bg', c.bg);
+  root.style.setProperty('--tab-fg', c.fg);
+}
 
 /* ============================================================
  *  ЗАГРУЗКА CSV ИЗ GOOGLE SHEETS
@@ -438,9 +448,15 @@ function bindUI() {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       this.classList.add('active');
       document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+
+      /* Меняем цветовую тему всей страницы под активную вкладку */
+      applyTabTheme(this.dataset.tab);
     });
   });
 }
+
+/* Стартовая тема — «Мероприятия» */
+applyTabTheme('events');
 
 bindUI();
 loadAll();
