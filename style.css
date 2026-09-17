@@ -264,7 +264,6 @@ body {
   background: var(--card-accent, var(--primary));
   color: #fff;
   letter-spacing: .04em;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 35%, transparent);
   z-index: 1;
 }
 
@@ -295,7 +294,7 @@ body {
 }
 
 /* ============================================================
- *  ДЕДЛАЙН — «Подать до», срочность цветом
+ *  ДЕДЛАЙН — «Приём заявок до», срочность цветом
  * ============================================================ */
 .deadline {
   display: inline-flex; align-items: center; gap: 6px;
@@ -330,19 +329,10 @@ body {
 
 /* ============================================================
  *  ПОДСВЕТКА «НОВОЕ»
+ *  Без кольца и свечения. Только акцентная полоска сверху
+ *  (та же, что у .card:hover) и бейдж в углу.
  * ============================================================ */
-.card--highlighted {
-  border-color: transparent;
-  box-shadow:
-    0 0 0 2px var(--card-accent),
-    0 8px 22px color-mix(in srgb, var(--card-accent) 22%, transparent);
-}
 .card--highlighted::before { opacity: 1; }
-.card--highlighted:hover {
-  box-shadow:
-    0 0 0 2px var(--card-accent),
-    0 14px 32px color-mix(in srgb, var(--card-accent) 30%, transparent);
-}
 
 /* ============================================================
  *  EMPTY / LOADING
