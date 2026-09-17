@@ -295,12 +295,16 @@ body {
 }
 
 /* ============================================================
- *  ДЕДЛАЙН — дата обычным цветом, срочность — акцентом
+ *  ДЕДЛАЙН — «Подать до», срочность цветом
  * ============================================================ */
 .deadline {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: .86rem; font-weight: 500;
   color: var(--text);
+}
+.deadline-label {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 .deadline-date {
   color: var(--text);
