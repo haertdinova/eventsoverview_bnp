@@ -10,12 +10,12 @@ const SHEET_NAMES = {
 };
 
 /* ============================================================
- *  ЦВЕТА РАЗДЕЛОВ
+ *  ЦВЕТА РАЗДЕЛОВ — корпоративная палитра НИУ ВШЭ
  * ============================================================ */
 const ACCENTS = {
-  events: { accent: '#4f46e5', bg: '#eef2ff', fg: '#4338ca' },
-  grants: { accent: '#059669', bg: '#ecfdf5', fg: '#047857' },
-  extra:  { accent: '#d97706', bg: '#fffbeb', fg: '#b45309' },
+  events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' },
+  grants: { accent: '#2A6FDB', bg: '#EAF1FC', fg: '#1C4E9C' },
+  extra:  { accent: '#5A8FD4', bg: '#EFF4FA', fg: '#3E6BA8' },
 };
 
 /* ============================================================
@@ -208,7 +208,7 @@ async function loadAll() {
     renderExtra();
 
     document.getElementById('status').textContent =
-      `Обновлено ${new Date().toLocaleString('ru-RU')}`;
+      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
   } catch (err) {
     console.error(err);
     document.getElementById('events-container').innerHTML =
@@ -299,7 +299,7 @@ function eventCardHTML(e) {
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🎓</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
+        ${e.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(e)}
     </article>`;
@@ -348,7 +348,7 @@ function simpleCardHTML(item, badgeLabel, c) {
       </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🎓</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
+        ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(item)}
     </article>`;
