@@ -201,13 +201,13 @@ body {
 .btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
- *  CARDS — одного размера в ряду, компактные
+ *  CARDS
  * ============================================================ */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 12px;
-  align-items: stretch;   /* карточки в ряду одинаковой высоты */
+  align-items: stretch;
 }
 
 .card {
@@ -229,7 +229,6 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
-/* Заголовок — обычный перенос по словам, без hyphens */
 .card-title {
   font-size: 1rem; font-weight: 700; line-height: 1.35;
   letter-spacing: -.005em;
@@ -255,7 +254,6 @@ body {
   background-size: 100% 1px;
 }
 
-/* Плашка «Новое» — в правом верхнем углу */
 .new-badge {
   position: absolute;
   top: 12px; right: 12px;
@@ -288,7 +286,6 @@ body {
   opacity: .7; font-size: 1em;
 }
 
-/* Футер прижат к низу — дедлайны на одной линии */
 .card-footer {
   margin-top: auto;
   padding-top: 10px;
@@ -296,13 +293,29 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px; flex-wrap: wrap;
 }
+
+/* ============================================================
+ *  ДЕДЛАЙН — дата обычным цветом, срочность — акцентом
+ * ============================================================ */
 .deadline {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: .86rem; font-weight: 600; color: var(--text);
+  font-size: .86rem; font-weight: 500;
+  color: var(--text);
 }
-.deadline.soon   { color: #B45309; }
-.deadline.urgent { color: #B91C1C; }
-.deadline.past   { color: var(--text-soft); text-decoration: line-through; }
+.deadline-date {
+  color: var(--text);
+  font-weight: 500;
+}
+.deadline-date.muted {
+  color: var(--text-soft);
+}
+.deadline-when {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.deadline-when.soon   { color: #B45309; }
+.deadline-when.urgent { color: #B91C1C; }
+
 .card-link {
   font-size: .86rem; font-weight: 600;
   color: var(--card-accent, var(--primary));
