@@ -36,6 +36,16 @@ function splitOrganizers(organizer) {
   return organizer.split(';').map(s => s.trim()).filter(Boolean);
 }
 
+/* Приводит варианты «НИУ ВШЭ – Пермь», «ФГН НИУ ВШЭ», «ВШЭ» и т. п.
+ * к единому «НИУ ВШЭ» — только для фильтра.
+ * В карточке название показывается как в таблице. */
+function normalizeOrganizerForFilter(org) {
+  if (!org) return org;
+  const o = org.trim();
+  if (isHSEOrganizer(o)) return 'НИУ ВШЭ';
+  return o;
+}
+
 /* ============================================================
  *  СКЛОНЕНИЯ
  * ============================================================ */
@@ -404,7 +414,7 @@ function populateFilters() {
   const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ru'));
 
-  /* Месяцы — с годом, уникальные, отсортированные по календарю */
+  /* Месяцы — с годом */
   const monthSet = new Map();
   actualEvents.forEach(e => {
     if (!e.dateStart) return;
@@ -419,10 +429,12 @@ function populateFilters() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, label]) => label);
 
-  /* Организаторы — все отдельные, из всех мероприятий */
+  /* Организаторы — с приведением вариантов ВШЭ к «НИУ ВШЭ» */
   const orgSet = new Set();
   actualEvents.forEach(e => {
-    (e.organizersList || []).forEach(o => orgSet.add(o));
+    (e.organizersList || []).forEach(o => {
+      orgSet.add(normalizeOrganizerForFilter(o));
+    });
   });
   const organizers = [...orgSet].sort((a, b) => a.localeCompare(b, 'ru'));
 
@@ -484,12 +496,11 @@ function sortEvents(list, mode) {
  * ============================================================ */
 function renderEvents() {
   const type      = document.getElementById('filter-type').value;
-  const month     = document.getElementById('filter-month').value;   /* "Октябрь 2026" */
-  const organizer = document.getElementById('filter-organizer').value.toLowerCase();
+  const month     = document.getElementById('filter-month').value;
+  const organizer = document.getElementById('filter-organizer').value;
   const sortBy    = document.getElementById('sort-by').value;
   const q         = document.getElementById('filter-search').value.toLowerCase().trim();
 
-  /* Разбираем "Октябрь 2026" на компоненты для сравнения */
   let monthLabel = null, monthYear = null;
   if (month) {
     const parts = month.split(' ');
@@ -497,14 +508,21 @@ function renderEvents() {
     monthLabel = parts.slice(0, -1).join(' ');
   }
 
+  const organizerLower = organizer ? organizer.toLowerCase() : '';
+
   let list = state.events.filter(e => {
     if (isExpiredEvent(e)) return false;
     if (state.showOnlyNew && !e.highlight) return false;
     if (type && e.type !== type) return false;
+
     if (organizer) {
-      const match = (e.organizersList || []).some(o => o.toLowerCase().includes(organizer));
+      const match = (e.organizersList || []).some(o => {
+        /* Приводим название к тому же виду, что и в фильтре, и ищем подстроку */
+        return normalizeOrganizerForFilter(o).toLowerCase().includes(organizerLower);
+      });
       if (!match) return false;
     }
+
     if (month) {
       if (!e.dateStart) return false;
       if (e.dateStart.getFullYear() !== monthYear) return false;
