@@ -201,13 +201,13 @@ body {
 .btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
- *  CARDS — компактно, без лишнего воздуха
+ *  CARDS — одного размера в ряду, компактные
  * ============================================================ */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 12px;
-  align-items: start;
+  align-items: stretch;   /* карточки в ряду одинаковой высоты */
 }
 
 .card {
@@ -288,8 +288,9 @@ body {
   opacity: .7; font-size: 1em;
 }
 
+/* Футер прижат к низу — дедлайны на одной линии */
 .card-footer {
-  margin-top: 10px;
+  margin-top: auto;
   padding-top: 10px;
   border-top: 1px dashed var(--border);
   display: flex; align-items: center; justify-content: space-between;
