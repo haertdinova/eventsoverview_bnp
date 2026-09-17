@@ -15,13 +15,16 @@ const SHEET_NAMES = {
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
 
-const SOON_DAYS   = 30;   // > SOON_DAYS   → зелёный
-const URGENT_DAYS = 10;   // ≤ URGENT_DAYS → красный, остальное до SOON_DAYS — жёлтый
+const SOON_DAYS   = 30;
+const URGENT_DAYS = 10;
 
 /* ============================================================
- *  МЕТКА «ВШЭ» — ищем по организатору
+ *  ВШЭ — по каким маркерам определяем
  * ============================================================ */
-const HSE_MARKERS = ['вшэ', 'высшей школы экономики'];
+const HSE_MARKERS = [
+  'вшэ',
+  'высшей школы экономики',
+];
 
 function isHSEOrganizer(organizer) {
   if (!organizer) return false;
@@ -377,24 +380,14 @@ function renderEvents() {
 function eventCardHTML(e) {
   const c = ACCENTS.events;
   const hasLink = /^https?:\/\//i.test(e.link);
+  const titleClass = `card-title-link${e.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
-    : escapeHtml(e.title);
-
-  const classes = ['card'];
-  if (e.isHSE)     classes.push('card--hse');
-  if (e.highlight) classes.push('card--highlighted');
-
-  const badges = [];
-  if (e.highlight) badges.push('<span class="new-badge">Новое</span>');
-  if (e.isHSE)     badges.push('<span class="hse-badge">ВШЭ</span>');
-  const badgesHTML = badges.length
-    ? `<div class="card-badges">${badges.join('')}</div>`
-    : '';
+    ? `<a class="${titleClass}" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
+    : `<span class="${e.isHSE ? 'title-hse' : ''}">${escapeHtml(e.title)}</span>`;
 
   return `
-    <article class="${classes.join(' ')}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${badgesHTML}
+    <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+      ${e.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
@@ -439,24 +432,14 @@ function renderExtra() {
 
 function simpleCardHTML(item, c) {
   const hasLink = /^https?:\/\//i.test(item.link);
+  const titleClass = `card-title-link${item.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
-    : escapeHtml(item.name);
-
-  const classes = ['card'];
-  if (item.isHSE)     classes.push('card--hse');
-  if (item.highlight) classes.push('card--highlighted');
-
-  const badges = [];
-  if (item.highlight) badges.push('<span class="new-badge">Новое</span>');
-  if (item.isHSE)     badges.push('<span class="hse-badge">ВШЭ</span>');
-  const badgesHTML = badges.length
-    ? `<div class="card-badges">${badges.join('')}</div>`
-    : '';
+    ? `<a class="${titleClass}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
+    : `<span class="${item.isHSE ? 'title-hse' : ''}">${escapeHtml(item.name)}</span>`;
 
   return `
-    <article class="${classes.join(' ')}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${badgesHTML}
+    <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+      ${item.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
