@@ -365,9 +365,7 @@ function eventCardHTML(e) {
 
   return `
     <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      <div class="card-header">
-        ${e.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
-      </div>
+      ${e.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
@@ -418,9 +416,7 @@ function simpleCardHTML(item, c) {
 
   return `
     <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      <div class="card-header">
-        ${item.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
-      </div>
+      ${item.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
