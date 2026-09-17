@@ -712,6 +712,16 @@ function bindUI() {
 
   document.getElementById('grant-search').addEventListener('input', renderGrants);
   document.getElementById('extra-search').addEventListener('input', renderExtra);
+  
+  document.getElementById('clear-grants').addEventListener('click', () => {
+    document.getElementById('grant-search').value = '';
+    renderGrants();
+  });
+  
+  document.getElementById('clear-extra').addEventListener('click', () => {
+    document.getElementById('extra-search').value = '';
+    renderExtra();
+  });
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', function () {
