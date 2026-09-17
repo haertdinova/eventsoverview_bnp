@@ -18,7 +18,6 @@ const ACCENTS = {
   extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' }, /* терракота */
 };
 
-/* Ставит CSS-переменные темы в соответствии с активной вкладкой */
 function applyTabTheme(tab) {
   const c = ACCENTS[tab];
   if (!c) return;
@@ -128,7 +127,8 @@ function escapeHtml(s) {
 }
 
 /* ============================================================
- *  ОПРЕДЕЛЕНИЕ ТИПА ПО НАЗВАНИЮ
+ *  ОПРЕДЕЛЕНИЕ ТИПА — оставлено, но используется ТОЛЬКО
+ *  для фильтра «Тип», а не для бейджей
  * ============================================================ */
 const TYPE_KEYWORDS = [
   ['конференц',    'Конференция'],
@@ -260,6 +260,8 @@ function fillSelect(id, values, placeholder) {
 
 /* ============================================================
  *  РЕНДЕР: МЕРОПРИЯТИЯ
+ *  Без бейджа типа — он дублирует название.
+ *  «Новое» остаётся для подсвеченных карточек.
  * ============================================================ */
 function renderEvents() {
   const type  = document.getElementById('filter-type').value;
@@ -300,12 +302,13 @@ function eventCardHTML(e) {
     ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
     : escapeHtml(e.title);
 
+  const headerHTML = e.highlight
+    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
+    : '';
+
   return `
     <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      <div class="card-header">
-        <span class="type-badge">${escapeHtml(e.type)}</span>
-        ${e.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
-      </div>
+      ${headerHTML}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
@@ -328,7 +331,7 @@ function renderGrants() {
     container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
     return;
   }
-  container.innerHTML = list.map(g => simpleCardHTML(g, 'Грант', ACCENTS.grants)).join('');
+  container.innerHTML = list.map(g => simpleCardHTML(g, ACCENTS.grants)).join('');
 }
 
 function renderExtra() {
@@ -341,21 +344,22 @@ function renderExtra() {
     container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
     return;
   }
-  container.innerHTML = list.map(x => simpleCardHTML(x, 'Возможность', ACCENTS.extra)).join('');
+  container.innerHTML = list.map(x => simpleCardHTML(x, ACCENTS.extra)).join('');
 }
 
-function simpleCardHTML(item, badgeLabel, c) {
+function simpleCardHTML(item, c) {
   const hasLink = /^https?:\/\//i.test(item.link);
   const titleHTML = hasLink
     ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
     : escapeHtml(item.name);
 
+  const headerHTML = item.highlight
+    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
+    : '';
+
   return `
     <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      <div class="card-header">
-        <span class="type-badge">${escapeHtml(badgeLabel)}</span>
-        ${item.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
-      </div>
+      ${headerHTML}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
@@ -449,14 +453,11 @@ function bindUI() {
       this.classList.add('active');
       document.getElementById('tab-' + this.dataset.tab).classList.add('active');
 
-      /* Меняем цветовую тему всей страницы под активную вкладку */
       applyTabTheme(this.dataset.tab);
     });
   });
 }
 
-/* Стартовая тема — «Мероприятия» */
 applyTabTheme('events');
-
 bindUI();
 loadAll();
