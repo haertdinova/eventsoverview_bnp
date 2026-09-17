@@ -228,16 +228,20 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
-/* Заголовок — минимум 2 строки, чтобы карточки выравнивались */
+/* Заголовок — красивые переносы, минимум 2 строки */
 .card-title {
-  font-size: 1.05rem; font-weight: 700; line-height: 1.35;
+  font-size: 1.05rem; font-weight: 700; line-height: 1.4;
   letter-spacing: -.005em;
-  margin-bottom: 10px;
-  min-height: calc(1.05rem * 1.35 * 2);
-  /* Оставляем место справа под плашку, если она есть — но так как
-     плашка absolute, заголовку просто чуть-чуть отступ справа */
+  margin-bottom: 12px;
+  min-height: calc(1.05rem * 1.4 * 2);
   padding-right: 8px;
+  text-wrap: balance;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
 }
+.card--highlighted .card-title { padding-right: 78px; }
+
 .card-title-link {
   color: inherit;
   text-decoration: none;
@@ -246,16 +250,18 @@ body {
   background-repeat: no-repeat;
   background-position: 0 100%;
   transition: background-size .25s ease, color .15s ease;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 .card-title-link:hover {
   color: var(--card-accent, var(--primary));
   background-size: 100% 1px;
 }
 
-/* Плашка «Новое» — висит в правом верхнем углу, не занимает поток */
+/* Плашка «Новое» — в правом верхнем углу, вне потока */
 .new-badge {
   position: absolute;
-  top: 12px; right: 12px;
+  top: 14px; right: 14px;
   display: inline-flex; align-items: center;
   padding: 3px 10px;
   font-size: .7rem; font-weight: 700;
@@ -266,18 +272,26 @@ body {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--card-accent) 35%, transparent);
   z-index: 1;
 }
-/* Если плашка есть, заголовку даём отступ справа, чтобы не налезала */
-.card--highlighted .card-title {
-  padding-right: 68px;
-}
 
 .card-info {
-  display: flex; flex-direction: column; gap: 5px;
+  display: flex; flex-direction: column;
+  gap: 8px;
   font-size: .9rem; color: var(--text-muted);
   margin-bottom: 0;
 }
-.card-info > div { display: flex; align-items: flex-start; gap: 8px; line-height: 1.45; }
-.card-info .icon { flex-shrink: 0; width: 18px; text-align: center; opacity: .7; font-size: 1em; }
+.card-info > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+  text-wrap: pretty;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+.card-info .icon {
+  flex-shrink: 0; width: 18px; text-align: center;
+  opacity: .7; font-size: 1em;
+}
 
 .card-footer {
   margin-top: auto;
