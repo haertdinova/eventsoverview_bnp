@@ -50,8 +50,6 @@ function plural(n, one, few, many) {
 
 /* ============================================================
  *  ЦВЕТА РАЗДЕЛОВ
- *  accent — активная вкладка и подсветка карточек
- *  bg     — фон страницы
  * ============================================================ */
 const ACCENTS = {
   events: { accent: '#102D69', bg: '#EDF1F9', fg: '#0A1F4A' },
@@ -194,8 +192,33 @@ function isPastDate(date) {
   return date < today;
 }
 
+/* Приводит все виды двойных кавычек к типографским:
+ * 1-й уровень — «ёлочки», 2-й — „лапки", 3-й — снова «ёлочки» и т. д. */
+function normalizeQuotes(str) {
+  if (str == null) return '';
+  let s = String(str);
+
+  /* Унифицируем все варианты двойных кавычек к прямому символу */
+  s = s.replace(/[«»""„"‟″]/g, '"');
+
+  /* Чередуем пары: 1 — ёлочки, 2 — лапки, 3 — снова ёлочки, 4 — снова лапки… */
+  const pairs = [
+    ['«', '»'],
+    ['„', '"'],
+  ];
+  let idx = 0;
+  s = s.replace(/"/g, () => {
+    const pair = pairs[Math.floor(idx / 2) % pairs.length];
+    const ch = idx % 2 === 0 ? pair[0] : pair[1];
+    idx++;
+    return ch;
+  });
+  return s;
+}
+
 function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c =>
+  const normalized = normalizeQuotes(s);
+  return normalized.replace(/[&<>"']/g, c =>
     ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
@@ -232,7 +255,7 @@ const state = {
  *  НОРМАЛИЗАЦИЯ
  * ============================================================ */
 function hasMarker(row) {
-  return !!(row['Новое'] || '').trim();
+  return !!(row['Метка'] || '').trim();
 }
 
 function normalizeEvent(row) {
