@@ -19,6 +19,7 @@
         <p class="hero-sub">
           Конференции, гранты и возможности для сотрудников ФГН НИУ ВШЭ · 2026–2027
         </p>
+        <p class="hero-stats" id="hero-stats"></p>
       </div>
     </header>
 
@@ -38,18 +39,25 @@
     </nav>
 
     <section id="tab-events" class="tab-content active">
-      <div class="filters">
+      <button class="filters-toggle" id="filters-toggle">Фильтры</button>
+
+      <div class="filters" id="filters-events">
+        <div class="filter filter-search">
+          <label for="filter-search">Поиск</label>
+          <input type="search" id="filter-search" placeholder="Название, дата…" />
+        </div>
         <div class="filter">
-          <label for="filter-type">Тип</label>
-          <select id="filter-type"><option value="">Все типы</option></select>
+          <label for="filter-organizer">Организатор</label>
+          <input type="text" id="filter-organizer" list="organizers-list" placeholder="Начните печатать…" />
+          <datalist id="organizers-list"></datalist>
         </div>
         <div class="filter">
           <label for="filter-month">Месяц</label>
           <select id="filter-month"><option value="">Все месяцы</option></select>
         </div>
         <div class="filter">
-          <label for="filter-organizer">Организатор</label>
-          <select id="filter-organizer"><option value="">Все организаторы</option></select>
+          <label for="filter-type">Тип</label>
+          <select id="filter-type"><option value="">Все типы</option></select>
         </div>
         <div class="filter">
           <label for="sort-by">Сортировка</label>
@@ -62,12 +70,14 @@
             <option value="name-desc">Название Я → А</option>
           </select>
         </div>
-        <div class="filter filter-search">
-          <label for="filter-search">Поиск</label>
-          <input type="search" id="filter-search" placeholder="Название, организатор, дата…" />
-        </div>
         <button class="btn-ghost" id="clear-events">Сбросить</button>
       </div>
+
+      <div class="results-bar">
+        <span class="result-count" id="result-count"></span>
+        <button class="btn-toggle" id="filter-new-only">Только новое</button>
+      </div>
+
       <div class="cards-grid" id="events-container"></div>
     </section>
 
