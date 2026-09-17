@@ -15,14 +15,19 @@ const SHEET_NAMES = {
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
 
-/* Пороги срочности (в днях):
- *   > SOON_DAYS      → зелёный  (спокойно)
- *   > URGENT_DAYS    → жёлтый   (скоро)
- *   ≤ URGENT_DAYS    → красный  (срочно)
- *   сегодня/завтра   → красный  (срочно)
- */
-const SOON_DAYS   = 30;
-const URGENT_DAYS = 10;
+const SOON_DAYS   = 30;   // > SOON_DAYS   → зелёный
+const URGENT_DAYS = 10;   // ≤ URGENT_DAYS → красный, остальное до SOON_DAYS — жёлтый
+
+/* ============================================================
+ *  МЕТКА «ВШЭ» — ищем по организатору
+ * ============================================================ */
+const HSE_MARKERS = ['вшэ', 'высшей школы экономики'];
+
+function isHSEOrganizer(organizer) {
+  if (!organizer) return false;
+  const o = organizer.toLowerCase();
+  return HSE_MARKERS.some(m => o.includes(m));
+}
 
 /* ============================================================
  *  ЦВЕТА РАЗДЕЛОВ
@@ -212,29 +217,33 @@ function normalizeEvent(row) {
   const title     = row['Название мероприятия'] || row['Название'] || '';
   const dateStr   = row['Даты проведения'] || '';
   const deadlineS = row['Дедлайн подачи заявок'] || '';
+  const organizer = row['Организатор'] || '';
   return {
     title,
     link:         row['Ссылка на сайт'] || '',
     dateRaw:      dateStr,
     dateStart:    parseRussianDate(dateStr),
     dateEnd:      parseLastRussianDate(dateStr),
-    organizer:    row['Организатор'] || '',
+    organizer,
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
     type:         detectType(title),
     highlight:    hasMarker(row),
+    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
 function normalizeSimple(row) {
   const deadlineS = row['Дедлайн'] || '';
+  const organizer = row['Организатор'] || '';
   return {
     name:         row['Название'] || row['Наименование'] || '',
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
-    organizer:    row['Организатор'] || '',
+    organizer,
     link:         row['Ссылка'] || '',
     highlight:    hasMarker(row),
+    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
@@ -372,9 +381,20 @@ function eventCardHTML(e) {
     ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
     : escapeHtml(e.title);
 
+  const classes = ['card'];
+  if (e.isHSE)     classes.push('card--hse');
+  if (e.highlight) classes.push('card--highlighted');
+
+  const badges = [];
+  if (e.highlight) badges.push('<span class="new-badge">Новое</span>');
+  if (e.isHSE)     badges.push('<span class="hse-badge">ВШЭ</span>');
+  const badgesHTML = badges.length
+    ? `<div class="card-badges">${badges.join('')}</div>`
+    : '';
+
   return `
-    <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${e.highlight ? '<span class="new-badge">Новое</span>' : ''}
+    <article class="${classes.join(' ')}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+      ${badgesHTML}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
@@ -423,9 +443,20 @@ function simpleCardHTML(item, c) {
     ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
     : escapeHtml(item.name);
 
+  const classes = ['card'];
+  if (item.isHSE)     classes.push('card--hse');
+  if (item.highlight) classes.push('card--highlighted');
+
+  const badges = [];
+  if (item.highlight) badges.push('<span class="new-badge">Новое</span>');
+  if (item.isHSE)     badges.push('<span class="hse-badge">ВШЭ</span>');
+  const badgesHTML = badges.length
+    ? `<div class="card-badges">${badges.join('')}</div>`
+    : '';
+
   return `
-    <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${item.highlight ? '<span class="new-badge">Новое</span>' : ''}
+    <article class="${classes.join(' ')}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
+      ${badgesHTML}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
@@ -436,11 +467,6 @@ function simpleCardHTML(item, c) {
 
 /* ============================================================
  *  ОБЩИЙ БЛОК ДЕДЛАЙНА
- *  Цвет счётчика:
- *    > SOON_DAYS   — зелёный (calm)
- *    > URGENT_DAYS — жёлтый (soon)
- *    ≤ URGENT_DAYS — красный (urgent)
- *    сегодня/завтра — красный (urgent)
  * ============================================================ */
 function deadlineBlock(item) {
   const hasLink = /^https?:\/\//i.test(item.link || '');
@@ -454,16 +480,16 @@ function deadlineBlock(item) {
   } else if (dd < 0) {
     inner = `<span class="deadline-label">Приём заявок был до</span> <span class="deadline-date muted">${escapeHtml(raw)}</span>`;
   } else if (dd === 0) {
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">сегодня</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-sep">·</span> <span class="deadline-when urgent">сегодня</span>`;
   } else if (dd === 1) {
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">завтра</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-sep">·</span> <span class="deadline-when urgent">завтра</span>`;
   } else {
     let cls;
-    if (dd <= URGENT_DAYS)      cls = 'urgent';   /* красный */
-    else if (dd <= SOON_DAYS)   cls = 'soon';     /* жёлтый  */
-    else                        cls = 'calm';     /* зелёный */
+    if (dd <= URGENT_DAYS)      cls = 'urgent';
+    else if (dd <= SOON_DAYS)   cls = 'soon';
+    else                        cls = 'calm';
 
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when ${cls}">через ${dd} дн.</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-sep">·</span> <span class="deadline-when ${cls}">через ${dd} дн.</span>`;
   }
 
   return `
