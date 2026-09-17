@@ -14,22 +14,40 @@ const SHEET_NAMES = {
  * ============================================================ */
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
-
-const SOON_DAYS   = 30;
 const URGENT_DAYS = 10;
 
 /* ============================================================
- *  ВШЭ — по каким маркерам определяем
+ *  ВШЭ
  * ============================================================ */
 const HSE_MARKERS = [
-  'вшэ',
-  'высшей школы экономики',
+  'ВШЭ',
+  'Высшей школы экономики',
 ];
 
-function isHSEOrganizer(organizer) {
-  if (!organizer) return false;
-  const o = organizer.toLowerCase();
-  return HSE_MARKERS.some(m => o.includes(m));
+function highlightHSE(organizer) {
+  if (!organizer) return '';
+  const escaped = escapeHtml(organizer);
+  const rx = new RegExp(HSE_MARKERS.map(escapeRegex).join('|'), 'gi');
+  return escaped.replace(rx, m => `<span class="org-hse">${m}</span>`);
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* ============================================================
+ *  РАЗБОР ОРГАНИЗАТОРА НА ЧАСТИ
+ *  Разделитель — только точка с запятой.
+ *  Запятые внутри названий сохраняются как есть.
+ *  «Еврейский музей и центр толерантности; ФГН НИУ ВШЭ»
+ *     → ["Еврейский музей и центр толерантности", "ФГН НИУ ВШЭ"]
+ * ============================================================ */
+function splitOrganizers(organizer) {
+  if (!organizer) return [];
+  return organizer
+    .split(';')
+    .map(s => s.trim())
+    .filter(Boolean);
 }
 
 /* ============================================================
@@ -206,7 +224,6 @@ function detectType(title) {
  * ============================================================ */
 const state = {
   events: [], grants: [], extra: [],
-  sortDir: 'asc',
 };
 
 /* ============================================================
@@ -228,11 +245,11 @@ function normalizeEvent(row) {
     dateStart:    parseRussianDate(dateStr),
     dateEnd:      parseLastRussianDate(dateStr),
     organizer,
+    organizersList: splitOrganizers(organizer),
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
     type:         detectType(title),
     highlight:    hasMarker(row),
-    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
@@ -244,9 +261,9 @@ function normalizeSimple(row) {
     deadlineRaw:  deadlineS,
     deadlineDate: parseRussianDate(deadlineS),
     organizer,
+    organizersList: splitOrganizers(organizer),
     link:         row['Ссылка'] || '',
     highlight:    hasMarker(row),
-    isHSE:        isHSEOrganizer(organizer),
   };
 }
 
@@ -318,7 +335,8 @@ function updateCounters() {
 function populateFilters() {
   const actualEvents = state.events.filter(e => !isExpiredEvent(e));
 
-  const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))].sort();
+  const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ru'));
 
   const monthIdxSet = new Set(
     actualEvents.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
@@ -327,8 +345,16 @@ function populateFilters() {
     .sort((a, b) => a - b)
     .map(idx => MONTH_NAMES_NOM[idx]);
 
+  /* Все организации из всех мероприятий — с разбивкой по ; */
+  const orgSet = new Set();
+  actualEvents.forEach(e => {
+    (e.organizersList || []).forEach(o => orgSet.add(o));
+  });
+  const organizers = [...orgSet].sort((a, b) => a.localeCompare(b, 'ru'));
+
   fillSelect('filter-type', types, 'Все типы');
   fillSelect('filter-month', months, 'Все месяцы');
+  fillSelect('filter-organizer', organizers, 'Все организаторы');
 }
 
 function fillSelect(id, values, placeholder) {
@@ -342,16 +368,57 @@ function fillSelect(id, values, placeholder) {
 }
 
 /* ============================================================
+ *  СОРТИРОВКА
+ * ============================================================ */
+function sortEvents(list, mode) {
+  const t = d => d ? d.getTime() : null;
+
+  const byDate = (a, b, dir) => {
+    const da = t(a.dateStart), db = t(b.dateStart);
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return dir === 'asc' ? da - db : db - da;
+  };
+
+  const byDeadline = (a, b, dir) => {
+    const da = t(a.deadlineDate), db = t(b.deadlineDate);
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return dir === 'asc' ? da - db : db - da;
+  };
+
+  const byName = (a, b, dir) => {
+    const r = a.title.localeCompare(b.title, 'ru', { sensitivity: 'base' });
+    return dir === 'asc' ? r : -r;
+  };
+
+  switch (mode) {
+    case 'date-asc':      return list.sort((a, b) => byDate(a, b, 'asc'));
+    case 'date-desc':     return list.sort((a, b) => byDate(a, b, 'desc'));
+    case 'deadline-asc':  return list.sort((a, b) => byDeadline(a, b, 'asc'));
+    case 'deadline-desc': return list.sort((a, b) => byDeadline(a, b, 'desc'));
+    case 'name-asc':      return list.sort((a, b) => byName(a, b, 'asc'));
+    case 'name-desc':     return list.sort((a, b) => byName(a, b, 'desc'));
+    default:              return list;
+  }
+}
+
+/* ============================================================
  *  РЕНДЕР: МЕРОПРИЯТИЯ
  * ============================================================ */
 function renderEvents() {
-  const type  = document.getElementById('filter-type').value;
-  const month = document.getElementById('filter-month').value;
-  const q     = document.getElementById('filter-search').value.toLowerCase().trim();
+  const type      = document.getElementById('filter-type').value;
+  const month     = document.getElementById('filter-month').value;
+  const organizer = document.getElementById('filter-organizer').value;
+  const sortBy    = document.getElementById('sort-by').value;
+  const q         = document.getElementById('filter-search').value.toLowerCase().trim();
 
   let list = state.events.filter(e => {
     if (isExpiredEvent(e)) return false;
     if (type && e.type !== type) return false;
+    if (organizer && !(e.organizersList || []).includes(organizer)) return false;
     if (month) {
       if (!e.dateStart) return false;
       if (MONTH_NAMES_NOM[e.dateStart.getMonth()] !== month) return false;
@@ -363,11 +430,7 @@ function renderEvents() {
     return true;
   });
 
-  list.sort((a, b) => {
-    const da = a.dateStart ? a.dateStart.getTime() : Infinity;
-    const db = b.dateStart ? b.dateStart.getTime() : Infinity;
-    return state.sortDir === 'asc' ? da - db : db - da;
-  });
+  sortEvents(list, sortBy);
 
   const container = document.getElementById('events-container');
   if (!list.length) {
@@ -380,10 +443,9 @@ function renderEvents() {
 function eventCardHTML(e) {
   const c = ACCENTS.events;
   const hasLink = /^https?:\/\//i.test(e.link);
-  const titleClass = `card-title-link${e.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="${titleClass}" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
-    : `<span class="${e.isHSE ? 'title-hse' : ''}">${escapeHtml(e.title)}</span>`;
+    ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
+    : escapeHtml(e.title);
 
   return `
     <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
@@ -391,7 +453,7 @@ function eventCardHTML(e) {
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
+        ${e.organizer ? `<div><span class="icon">🏢</span><span>${highlightHSE(e.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(e)}
     </article>`;
@@ -432,17 +494,16 @@ function renderExtra() {
 
 function simpleCardHTML(item, c) {
   const hasLink = /^https?:\/\//i.test(item.link);
-  const titleClass = `card-title-link${item.isHSE ? ' title-hse' : ''}`;
   const titleHTML = hasLink
-    ? `<a class="${titleClass}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
-    : `<span class="${item.isHSE ? 'title-hse' : ''}">${escapeHtml(item.name)}</span>`;
+    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
+    : escapeHtml(item.name);
 
   return `
     <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
       ${item.highlight ? '<span class="new-badge">Новое</span>' : ''}
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
+        ${item.organizer ? `<div><span class="icon">🏢</span><span>${highlightHSE(item.organizer)}</span></div>` : ''}
       </div>
       ${deadlineBlock(item)}
     </article>`;
@@ -467,11 +528,7 @@ function deadlineBlock(item) {
   } else if (dd === 1) {
     inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-sep">·</span> <span class="deadline-when urgent">завтра</span>`;
   } else {
-    let cls;
-    if (dd <= URGENT_DAYS)      cls = 'urgent';
-    else if (dd <= SOON_DAYS)   cls = 'soon';
-    else                        cls = 'calm';
-
+    const cls = dd <= URGENT_DAYS ? 'urgent' : '';
     inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-sep">·</span> <span class="deadline-when ${cls}">через ${dd} дн.</span>`;
   }
 
@@ -505,20 +562,15 @@ function showSkeletons() {
  *  ИНИЦИАЛИЗАЦИЯ
  * ============================================================ */
 function bindUI() {
-  ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderEvents);
-  });
+  ['filter-type', 'filter-month', 'filter-organizer', 'sort-by', 'filter-search']
+    .forEach(id => {
+      document.getElementById(id).addEventListener('input', renderEvents);
+    });
 
   document.getElementById('clear-events').addEventListener('click', () => {
-    ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    renderEvents();
-  });
-
-  document.getElementById('sort-date').addEventListener('click', function () {
-    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-    this.textContent = state.sortDir === 'asc' ? 'Дата ↑' : 'Дата ↓';
+    ['filter-type', 'filter-month', 'filter-organizer', 'filter-search']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('sort-by').value = 'date-asc';
     renderEvents();
   });
 
