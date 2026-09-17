@@ -23,6 +23,7 @@ const WEEK_DAYS   = 7;
 const HSE_MARKERS = [
   'ВШЭ',
   'Высшей школы экономики',
+  'Высшая школа экономики',
 ];
 
 function isHSEOrganizer(organizer) {
