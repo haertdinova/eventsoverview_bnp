@@ -334,13 +334,12 @@ async function loadAll() {
     updateCounters();
     updateHeroStats();
     populateFilters();
-    populateOrganizerDatalist();
     renderEvents();
     renderGrants();
     renderExtra();
 
     document.getElementById('status').textContent =
-      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
+      `Данные актуальны на ${new Date().toLocaleString('ru-RU')}`;
   } catch (err) {
     console.error(err);
     document.getElementById('events-container').innerHTML =
@@ -406,7 +405,7 @@ function populateFilters() {
     .sort((a, b) => a.localeCompare(b, 'ru'));
 
   /* Месяцы — с годом, уникальные, отсортированные по календарю */
-  const monthSet = new Map(); /* key: "YYYY-MM" → label: "Октябрь 2026" */
+  const monthSet = new Map();
   actualEvents.forEach(e => {
     if (!e.dateStart) return;
     const y = e.dateStart.getFullYear();
@@ -420,22 +419,16 @@ function populateFilters() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, label]) => label);
 
-  fillSelect('filter-type',  types,  'Все типы');
-  fillSelect('filter-month', months, 'Все месяцы');
-}
-
-function populateOrganizerDatalist() {
-  const actualEvents = state.events.filter(e => !isExpiredEvent(e));
+  /* Организаторы — все отдельные, из всех мероприятий */
   const orgSet = new Set();
   actualEvents.forEach(e => {
     (e.organizersList || []).forEach(o => orgSet.add(o));
   });
   const organizers = [...orgSet].sort((a, b) => a.localeCompare(b, 'ru'));
 
-  const datalist = document.getElementById('organizers-list');
-  datalist.innerHTML = organizers
-    .map(o => `<option value="${escapeHtml(o)}"></option>`)
-    .join('');
+  fillSelect('filter-type',      types,      'Все типы');
+  fillSelect('filter-month',     months,     'Все месяцы');
+  fillSelect('filter-organizer', organizers, 'Все организаторы');
 }
 
 function fillSelect(id, values, placeholder) {
@@ -492,7 +485,7 @@ function sortEvents(list, mode) {
 function renderEvents() {
   const type      = document.getElementById('filter-type').value;
   const month     = document.getElementById('filter-month').value;   /* "Октябрь 2026" */
-  const organizer = document.getElementById('filter-organizer').value.trim().toLowerCase();
+  const organizer = document.getElementById('filter-organizer').value.toLowerCase();
   const sortBy    = document.getElementById('sort-by').value;
   const q         = document.getElementById('filter-search').value.toLowerCase().trim();
 
