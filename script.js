@@ -36,9 +36,6 @@ function splitOrganizers(organizer) {
   return organizer.split(';').map(s => s.trim()).filter(Boolean);
 }
 
-/* Приводит варианты «НИУ ВШЭ – Пермь», «ФГН НИУ ВШЭ», «ВШЭ» и т. п.
- * к единому «НИУ ВШЭ» — только для фильтра.
- * В карточке название показывается как в таблице. */
 function normalizeOrganizerForFilter(org) {
   if (!org) return org;
   const o = org.trim();
@@ -206,13 +203,10 @@ function normalizeQuotes(str) {
   if (str == null) return '';
   let s = String(str);
 
-  /* Если строка начинается с «ёлочки» — автор расставил кавычки сам, не трогаем */
   if (s.trimStart().startsWith('«')) return s;
 
-  /* Иначе — унифицируем все виды кавычек к прямому символу */
   s = s.replace(/[«»""„"‟″]/g, '"');
 
-  /* И расставляем парами: 1-я « », 2-я „ ", 3-я « », 4-я „ " ... */
   let idx = 0;
   s = s.replace(/"/g, () => {
     const level = Math.floor(idx / 2);
@@ -232,6 +226,9 @@ function escapeHtml(s) {
 
 /* ============================================================
  *  ОПРЕДЕЛЕНИЕ ТИПА
+ *  Если ни одно ключевое слово не подошло — возвращаем пустую
+ *  строку. Такие позиции не попадают в фильтр «Тип», но видны
+ *  при выборе «Все типы».
  * ============================================================ */
 const TYPE_KEYWORDS = [
   ['конференц',    'Конференция'],
@@ -248,7 +245,7 @@ const TYPE_KEYWORDS = [
 function detectType(title) {
   const t = (title || '').toLowerCase();
   for (const [kw, type] of TYPE_KEYWORDS) if (t.includes(kw)) return type;
-  return 'Мероприятие';
+  return '';
 }
 
 /* ============================================================
@@ -410,11 +407,9 @@ function updateHeroStats() {
 function populateFilters() {
   const actualEvents = state.events.filter(e => !isExpiredEvent(e));
 
-  /* Типы */
   const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ru'));
 
-  /* Месяцы — с годом */
   const monthSet = new Map();
   actualEvents.forEach(e => {
     if (!e.dateStart) return;
@@ -429,7 +424,6 @@ function populateFilters() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, label]) => label);
 
-  /* Организаторы — с приведением вариантов ВШЭ к «НИУ ВШЭ» */
   const orgSet = new Set();
   actualEvents.forEach(e => {
     (e.organizersList || []).forEach(o => {
@@ -517,7 +511,6 @@ function renderEvents() {
 
     if (organizer) {
       const match = (e.organizersList || []).some(o => {
-        /* Приводим название к тому же виду, что и в фильтре, и ищем подстроку */
         return normalizeOrganizerForFilter(o).toLowerCase().includes(organizerLower);
       });
       if (!match) return false;
@@ -712,12 +705,12 @@ function bindUI() {
 
   document.getElementById('grant-search').addEventListener('input', renderGrants);
   document.getElementById('extra-search').addEventListener('input', renderExtra);
-  
+
   document.getElementById('clear-grants').addEventListener('click', () => {
     document.getElementById('grant-search').value = '';
     renderGrants();
   });
-  
+
   document.getElementById('clear-extra').addEventListener('click', () => {
     document.getElementById('extra-search').value = '';
     renderExtra();
