@@ -240,6 +240,15 @@ body {
 }
 .card--highlighted .card-title { padding-right: 76px; }
 
+/* Название мероприятия ВШЭ — фирменным цветом */
+.card-title .title-hse {
+  color: var(--hse);
+}
+.card-title .title-hse.card-title-link:hover {
+  color: var(--hse);
+  filter: brightness(1.15);
+}
+
 .card-title-link {
   color: inherit;
   text-decoration: none;
@@ -247,7 +256,7 @@ body {
   background-size: 0% 1px;
   background-repeat: no-repeat;
   background-position: 0 100%;
-  transition: background-size .25s ease, color .15s ease;
+  transition: background-size .25s ease, color .15s ease, filter .15s ease;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -285,14 +294,6 @@ body {
 .card-info .icon {
   flex-shrink: 0; width: 18px; text-align: center;
   opacity: .7; font-size: 1em;
-}
-
-/* Организатор ВШЭ — фирменным цветом */
-.card--hse .card-info .icon-hse,
-.card--hse .card-info .org-hse {
-  color: var(--hse);
-  font-weight: 600;
-  opacity: 1;
 }
 
 .card-footer {
