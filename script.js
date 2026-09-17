@@ -256,7 +256,7 @@ const state = {
  *  НОРМАЛИЗАЦИЯ
  * ============================================================ */
 function hasMarker(row) {
-  return !!(row['Метка'] || '').trim();
+  return !!(row['Новое'] || '').trim();
 }
 
 function normalizeEvent(row) {
