@@ -54,6 +54,8 @@
   --text-muted: #5A6474;
   --text-soft: #8B95A8;
 
+  --hse-title: #C8102E;
+
   --radius: 16px;
   --radius-sm: 10px;
   --radius-pill: 999px;
@@ -266,7 +268,7 @@ body {
 }
 
 /* ============================================================
- *  CARDS — больше воздуха
+ *  CARDS
  * ============================================================ */
 .cards-grid {
   display: grid;
@@ -310,12 +312,23 @@ body {
   background-size: 0% 1px;
   background-repeat: no-repeat;
   background-position: 0 100%;
-  transition: background-size .25s ease, color .15s ease;
+  transition: background-size .25s ease, color .15s ease, filter .15s ease;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
 .card-title-link:hover {
   color: var(--card-accent, var(--primary));
+  background-size: 100% 1px;
+}
+
+/* Название мероприятия ВШЭ — фирменным красным */
+.card-title-link.title-hse,
+.card-title .title-hse {
+  color: var(--hse-title);
+}
+.card-title-link.title-hse:hover {
+  color: var(--hse-title);
+  filter: brightness(1.15);
   background-size: 100% 1px;
 }
 
@@ -348,11 +361,6 @@ body {
 .card-info .icon {
   flex-shrink: 0; width: 18px; text-align: center;
   opacity: .7; font-size: 1em;
-}
-
-.org-hse {
-  font-weight: 600;
-  color: var(--text);
 }
 
 .card-footer {
@@ -399,7 +407,7 @@ body {
 .card--highlighted::before { opacity: 1; }
 
 /* ============================================================
- *  СКЕЛЕТОНЫ — как карточки
+ *  СКЕЛЕТОНЫ
  * ============================================================ */
 .skeleton-card {
   background: var(--surface);
@@ -448,7 +456,6 @@ body {
   html { font-size: 16px; }
   body { padding: 20px 14px 36px; }
 
-  /* Фильтры прячутся под кнопку */
   .filters-toggle { display: block; }
   .filters { display: none; padding: 12px; }
   .filters.open { display: flex; flex-direction: column; align-items: stretch; }
