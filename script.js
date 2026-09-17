@@ -15,6 +15,15 @@ const SHEET_NAMES = {
 const HIDE_EXPIRED = true;
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
 
+/* Пороги срочности (в днях):
+ *   > SOON_DAYS      → зелёный  (спокойно)
+ *   > URGENT_DAYS    → жёлтый   (скоро)
+ *   ≤ URGENT_DAYS    → красный  (срочно)
+ *   сегодня/завтра   → красный  (срочно)
+ */
+const SOON_DAYS   = 30;
+const URGENT_DAYS = 10;
+
 /* ============================================================
  *  ЦВЕТА РАЗДЕЛОВ
  * ============================================================ */
@@ -427,6 +436,11 @@ function simpleCardHTML(item, c) {
 
 /* ============================================================
  *  ОБЩИЙ БЛОК ДЕДЛАЙНА
+ *  Цвет счётчика:
+ *    > SOON_DAYS   — зелёный (calm)
+ *    > URGENT_DAYS — жёлтый (soon)
+ *    ≤ URGENT_DAYS — красный (urgent)
+ *    сегодня/завтра — красный (urgent)
  * ============================================================ */
 function deadlineBlock(item) {
   const hasLink = /^https?:\/\//i.test(item.link || '');
@@ -443,12 +457,13 @@ function deadlineBlock(item) {
     inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">сегодня</span>`;
   } else if (dd === 1) {
     inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">завтра</span>`;
-  } else if (dd <= 7) {
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">через ${dd} дн.</span>`;
-  } else if (dd <= 30) {
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when soon">через ${dd} дн.</span>`;
   } else {
-    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span>`;
+    let cls;
+    if (dd <= URGENT_DAYS)      cls = 'urgent';   /* красный */
+    else if (dd <= SOON_DAYS)   cls = 'soon';     /* жёлтый  */
+    else                        cls = 'calm';     /* зелёный */
+
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when ${cls}">через ${dd} дн.</span>`;
   }
 
   return `
