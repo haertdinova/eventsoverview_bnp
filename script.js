@@ -13,7 +13,6 @@ const SHEET_NAMES = {
  *  НАСТРОЙКИ ПОВЕДЕНИЯ
  * ============================================================ */
 const HIDE_EXPIRED = true;
-
 const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
 
 /* ============================================================
@@ -364,13 +363,11 @@ function eventCardHTML(e) {
     ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
     : escapeHtml(e.title);
 
-  const headerHTML = e.highlight
-    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
-    : '';
-
   return `
     <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${headerHTML}
+      <div class="card-header">
+        ${e.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
+      </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
@@ -419,13 +416,11 @@ function simpleCardHTML(item, c) {
     ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
     : escapeHtml(item.name);
 
-  const headerHTML = item.highlight
-    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
-    : '';
-
   return `
     <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${headerHTML}
+      <div class="card-header">
+        ${item.highlight ? '<span class="type-badge new-badge">Новое</span>' : ''}
+      </div>
       <h3 class="card-title">${titleHTML}</h3>
       <div class="card-info">
         ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
