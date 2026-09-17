@@ -54,8 +54,6 @@
   --text-muted: #5A6474;
   --text-soft: #8B95A8;
 
-  --hse: #C8102E;
-
   --radius: 16px;
   --radius-sm: 10px;
   --radius-pill: 999px;
@@ -180,27 +178,21 @@ body {
   background: #fff;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--tab-accent) 15%, transparent);
 }
-.filter-search { flex: 1; min-width: 220px; }
+/* Организатор и сортировка — пошире */
+#filter-organizer { min-width: 200px; }
+#sort-by { min-width: 190px; }
+.filter-search { flex: 1; min-width: 200px; }
 
-.btn-ghost, .btn-sort {
+.btn-ghost {
   padding: 8px 18px; border-radius: var(--radius-sm);
   font-family: inherit; font-size: .92rem;
   cursor: pointer; transition: var(--t); white-space: nowrap; height: 38px;
-}
-.btn-ghost {
   background: transparent; color: var(--text-muted);
   border: 1px solid var(--border); font-weight: 400;
 }
 .btn-ghost:hover {
   background: var(--bg); color: var(--text); border-color: var(--border-strong);
 }
-.btn-sort {
-  background: var(--tab-bg);
-  color: var(--tab-fg);
-  border: 1px solid transparent; font-weight: 600;
-  transition: background .25s ease, color .25s ease, filter .2s ease;
-}
-.btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
  *  CARDS
@@ -240,15 +232,6 @@ body {
 }
 .card--highlighted .card-title { padding-right: 76px; }
 
-/* Название мероприятия ВШЭ — фирменным цветом */
-.card-title .title-hse {
-  color: var(--hse);
-}
-.card-title .title-hse.card-title-link:hover {
-  color: var(--hse);
-  filter: brightness(1.15);
-}
-
 .card-title-link {
   color: inherit;
   text-decoration: none;
@@ -256,7 +239,7 @@ body {
   background-size: 0% 1px;
   background-repeat: no-repeat;
   background-position: 0 100%;
-  transition: background-size .25s ease, color .15s ease, filter .15s ease;
+  transition: background-size .25s ease, color .15s ease;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -296,6 +279,12 @@ body {
   opacity: .7; font-size: 1em;
 }
 
+/* Тихая отметка ВШЭ — только жирный шрифт */
+.org-hse {
+  font-weight: 600;
+  color: var(--text);
+}
+
 .card-footer {
   margin-top: auto;
   padding-top: 10px;
@@ -312,28 +301,19 @@ body {
   font-size: .86rem; font-weight: 500;
   color: var(--text);
 }
-.deadline-label {
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.deadline-date {
-  color: var(--text);
-  font-weight: 500;
-}
-.deadline-date.muted {
-  color: var(--text-soft);
-}
-.deadline-sep {
-  color: var(--text-soft);
-  padding: 0 2px;
-}
+.deadline-label { color: var(--text-muted); font-weight: 500; }
+.deadline-date  { color: var(--text); font-weight: 500; }
+.deadline-date.muted { color: var(--text-soft); }
+.deadline-sep   { color: var(--text-soft); padding: 0 2px; }
 .deadline-when {
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text-muted);
   white-space: nowrap;
 }
-.deadline-when.calm   { color: #0E7C66; }
-.deadline-when.soon   { color: #B45309; }
-.deadline-when.urgent { color: #B91C1C; }
+.deadline-when.urgent {
+  color: #B91C1C;
+  font-weight: 700;
+}
 
 .card-link {
   font-size: .86rem; font-weight: 600;
@@ -389,7 +369,8 @@ body {
   body { padding: 16px 14px 32px; }
   .filters { flex-direction: column; align-items: stretch; padding: 10px 12px; }
   .filter { min-width: 0; }
-  .btn-ghost, .btn-sort { width: 100%; }
+  #filter-organizer, #sort-by { min-width: 0; }
+  .btn-ghost { width: 100%; }
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
   .card--highlighted .card-title { padding-right: 0; }
