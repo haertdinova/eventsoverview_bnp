@@ -201,18 +201,19 @@ body {
 .btn-sort:hover { filter: brightness(.96); }
 
 /* ============================================================
- *  CARDS
+ *  CARDS — компактно, без лишнего воздуха
  * ============================================================ */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 14px;
+  gap: 12px;
+  align-items: start;
 }
 
 .card {
   position: relative; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 18px 18px 14px;
+  padding: 14px 16px 12px;
   display: flex; flex-direction: column;
   transition: var(--t); overflow: hidden;
 }
@@ -228,19 +229,15 @@ body {
 }
 .card:hover::before { opacity: 1; }
 
-/* Заголовок — красивые переносы, минимум 2 строки */
+/* Заголовок — обычный перенос по словам, без hyphens */
 .card-title {
-  font-size: 1.05rem; font-weight: 700; line-height: 1.4;
+  font-size: 1rem; font-weight: 700; line-height: 1.35;
   letter-spacing: -.005em;
-  margin-bottom: 12px;
-  min-height: calc(1.05rem * 1.4 * 2);
-  padding-right: 8px;
-  text-wrap: balance;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  margin-bottom: 8px;
+  padding-right: 6px;
   overflow-wrap: break-word;
 }
-.card--highlighted .card-title { padding-right: 78px; }
+.card--highlighted .card-title { padding-right: 76px; }
 
 .card-title-link {
   color: inherit;
@@ -258,10 +255,10 @@ body {
   background-size: 100% 1px;
 }
 
-/* Плашка «Новое» — в правом верхнем углу, вне потока */
+/* Плашка «Новое» — в правом верхнем углу */
 .new-badge {
   position: absolute;
-  top: 14px; right: 14px;
+  top: 12px; right: 12px;
   display: inline-flex; align-items: center;
   padding: 3px 10px;
   font-size: .7rem; font-weight: 700;
@@ -275,18 +272,16 @@ body {
 
 .card-info {
   display: flex; flex-direction: column;
-  gap: 8px;
-  font-size: .9rem; color: var(--text-muted);
+  gap: 4px;
+  font-size: .88rem; color: var(--text-muted);
   margin-bottom: 0;
 }
 .card-info > div {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  line-height: 1.5;
-  text-wrap: pretty;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  line-height: 1.45;
+  overflow-wrap: break-word;
 }
 .card-info .icon {
   flex-shrink: 0; width: 18px; text-align: center;
@@ -294,21 +289,21 @@ body {
 }
 
 .card-footer {
-  margin-top: auto;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px dashed var(--border);
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px; flex-wrap: wrap;
 }
 .deadline {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: .87rem; font-weight: 600; color: var(--text);
+  font-size: .86rem; font-weight: 600; color: var(--text);
 }
 .deadline.soon   { color: #B45309; }
 .deadline.urgent { color: #B91C1C; }
 .deadline.past   { color: var(--text-soft); text-decoration: line-through; }
 .card-link {
-  font-size: .87rem; font-weight: 600;
+  font-size: .86rem; font-weight: 600;
   color: var(--card-accent, var(--primary));
   text-decoration: none;
   white-space: nowrap;
@@ -345,7 +340,7 @@ body {
   background: linear-gradient(90deg, #EDF0F5 25%, #E0E4EB 37%, #EDF0F5 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: var(--radius); height: 170px;
+  border-radius: var(--radius); height: 150px;
 }
 @keyframes shimmer {
   0%   { background-position: 100% 50%; }
@@ -375,7 +370,6 @@ body {
   .btn-ghost, .btn-sort { width: 100%; }
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .tab-btn { padding: 8px 14px; font-size: .88rem; }
-  .card-title { min-height: 0; }
   .card--highlighted .card-title { padding-right: 0; }
   .new-badge {
     position: static;
