@@ -1,348 +1,5 @@
 /* ============================================================
- *  КОНФИГУРАЦИЯ
- * ============================================================ */
-const SHEET_ID = '1xpqZhHrXlKluMDPfkRgJBewJrlUikF-MB4Vkv9X8du4';
-
-const SHEET_NAMES = {
-  events: 'Мероприятия',
-  grants: 'Гранты',
-  extra:  'Дополнительно',
-};
-
-/* ============================================================
- *  НАСТРОЙКИ ПОВЕДЕНИЯ
- * ============================================================ */
-/* Скрывать ли то, у чего дедлайн подачи уже прошёл.
- * Применяется ко всем трём вкладкам.                      */
-const HIDE_EXPIRED = true;
-
-/* Что считать «прошедшим» у мероприятия, если дедлайн не указан:
- *   'event'    — ориентироваться на дату самого мероприятия
- *                (мероприятие закончилось → скрываем);
- *   'never'    — если дедлайна нет, не скрывать никогда.
- * По умолчанию: у мероприятия с пустым дедлайном смотрим на дату. */
-const FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE = 'event';
-
-/* ============================================================
- *  ЦВЕТА РАЗДЕЛОВ
- * ============================================================ */
-const ACCENTS = {
-  events: { accent: '#102D69', bg: '#E9EEF6', fg: '#0A1F4A' },
-  grants: { accent: '#0E7C66', bg: '#E6F4F0', fg: '#0A5C4B' },
-  extra:  { accent: '#C75B12', bg: '#FBEEE3', fg: '#9C4409' },
-};
-
-function applyTabTheme(tab) {
-  const c = ACCENTS[tab];
-  if (!c) return;
-  const root = document.documentElement;
-  root.style.setProperty('--tab-accent', c.accent);
-  root.style.setProperty('--tab-bg', c.bg);
-  root.style.setProperty('--tab-fg', c.fg);
-}
-
-/* ============================================================
- *  ЗАГРУЗКА CSV ИЗ GOOGLE SHEETS
- * ============================================================ */
-function gvizUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-}
-
-function parseCSV(text) {
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i], next = text[i + 1];
-    if (inQuotes) {
-      if (c === '"' && next === '"') { field += '"'; i++; }
-      else if (c === '"') { inQuotes = false; }
-      else { field += c; }
-    } else {
-      if (c === '"') { inQuotes = true; }
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else if (c === '\r') {}
-      else { field += c; }
-    }
-  }
-  if (field !== '' || row.length) { row.push(field); rows.push(row); }
-  return rows;
-}
-
-function rowsToObjects(rows) {
-  if (!rows.length) return [];
-  const headers = rows[0].map(h => h.trim());
-  return rows.slice(1)
-    .filter(r => r.some(c => String(c).trim() !== ''))
-    .map(r => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
-      return obj;
-    });
-}
-
-async function loadSheet(name) {
-  const res = await fetch(gvizUrl(name));
-  if (!res.ok) throw new Error(`HTTP ${res.status} для листа «${name}»`);
-  return rowsToObjects(parseCSV(await res.text()));
-}
-
-/* ============================================================
- *  ДАТЫ
- * ============================================================ */
-const MONTH_STEMS = [
-  ['январ', 0], ['февра', 1], ['март', 2], ['апрел', 3],
-  ['май', 4], ['мая', 4], ['июн', 5], ['июл', 6], ['авгус', 7],
-  ['сентя', 8], ['октяб', 9], ['нояб', 10], ['декаб', 11],
-];
-const MONTH_NAMES_NOM = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
-];
-
-/* Первая дата в строке */
-function parseRussianDate(str) {
-  if (!str) return null;
-  const s = String(str).trim();
-  if (!s) return null;
-
-  let m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
-  if (m) {
-    let y = +m[3]; if (y < 100) y += 2000;
-    return new Date(y, +m[2] - 1, +m[1]);
-  }
-  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
-
-  const lower = s.toLowerCase();
-  const yearM = lower.match(/(\d{4})/);
-  const year = yearM ? +yearM[1] : new Date().getFullYear();
-
-  for (const [stem, monthIdx] of MONTH_STEMS) {
-    const pos = lower.indexOf(stem);
-    if (pos === -1) continue;
-    const before = lower.slice(0, pos);
-    const days = before.match(/\d{1,2}(?=\D*$)/g);
-    const day = days && days.length ? +days[days.length - 1] : 1;
-    return new Date(year, monthIdx, day);
-  }
-  return null;
-}
-
-/* Последняя (самая поздняя) дата в строке — для диапазонов
- * вида «10–11 сентября» или «30 сентября – 2 октября»         */
-function parseLastRussianDate(str) {
-  if (!str) return null;
-  const s = String(str).trim();
-  if (!s) return null;
-
-  const lower = s.toLowerCase();
-  const yearM = lower.match(/(\d{4})/);
-  const year = yearM ? +yearM[1] : new Date().getFullYear();
-
-  let latest = null;
-  for (const [stem, monthIdx] of MONTH_STEMS) {
-    let pos = 0, found;
-    while ((found = lower.indexOf(stem, pos)) !== -1) {
-      const before = lower.slice(0, found);
-      const dm = before.match(/(\d{1,2})[^\d]*$/);
-      const day = dm ? +dm[1] : 1;
-      const d = new Date(year, monthIdx, day);
-      if (!latest || d > latest) latest = d;
-      pos = found + stem.length;
-    }
-  }
-  return latest;
-}
-
-function daysUntil(date) {
-  if (!date) return Infinity;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((date - today) / 86400000);
-}
-
-/* Прошла ли дата (строго до сегодняшнего дня).
- * Если дата не указана — не считаем прошедшей. */
-function isPastDate(date) {
-  if (!date) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-}
-
-/* ============================================================
- *  ОПРЕДЕЛЕНИЕ ТИПА — только для фильтра «Тип»
- * ============================================================ */
-const TYPE_KEYWORDS = [
-  ['конференц',    'Конференция'],
-  ['симпозиум',    'Симпозиум'],
-  ['круглый стол', 'Круглый стол'],
-  ['семинар',      'Семинар'],
-  ['форум',        'Форум'],
-  ['чтени',        'Чтения'],
-  ['съезд',        'Съезд'],
-  ['школа',        'Школа'],
-  ['конкурс',      'Конкурс'],
-];
-
-function detectType(title) {
-  const t = (title || '').toLowerCase();
-  for (const [kw, type] of TYPE_KEYWORDS) if (t.includes(kw)) return type;
-  return 'Мероприятие';
-}
-
-/* ============================================================
- *  СОСТОЯНИЕ
- * ============================================================ */
-const state = {
-  events: [], grants: [], extra: [],
-  sortDir: 'asc',
-};
-
-/* ============================================================
- *  НОРМАЛИЗАЦИЯ
- * ============================================================ */
-function hasMarker(row) {
-  return !!(row['Метка'] || '').trim();
-}
-
-function normalizeEvent(row) {
-  const title     = row['Название мероприятия'] || row['Название'] || '';
-  const dateStr   = row['Даты проведения'] || '';
-  const deadlineS = row['Дедлайн подачи заявок'] || '';
-  return {
-    title,
-    link:         row['Ссылка на сайт'] || '',
-    dateRaw:      dateStr,
-    dateStart:    parseRussianDate(dateStr),
-    dateEnd:      parseLastRussianDate(dateStr),
-    organizer:    row['Организатор'] || '',
-    deadlineRaw:  deadlineS,
-    deadlineDate: parseRussianDate(deadlineS),
-    type:         detectType(title),
-    highlight:    hasMarker(row),
-  };
-}
-
-function normalizeSimple(row) {
-  const deadlineS = row['Дедлайн'] || '';
-  return {
-    name:         row['Название'] || row['Наименование'] || '',
-    deadlineRaw:  deadlineS,
-    deadlineDate: parseRussianDate(deadlineS),
-    organizer:    row['Организатор'] || '',
-    link:         row['Ссылка'] || '',
-    highlight:    hasMarker(row),
-  };
-}
-
-/* ============================================================
- *  ПРАВИЛО «ПРОШЛО ИЛИ НЕТ»
- * ============================================================ */
-function isExpiredEvent(e) {
-  if (!HIDE_EXPIRED) return false;
-  /* Приоритет — дедлайн подачи */
-  if (e.deadlineDate) return isPastDate(e.deadlineDate);
-  /* Дедлайна нет — смотрим на дату мероприятия (по настройке) */
-  if (FALLBACK_FOR_EVENTS_WITHOUT_DEADLINE === 'event') {
-    return isPastDate(e.dateEnd || e.dateStart);
-  }
-  return false;
-}
-
-function isExpiredSimple(item) {
-  if (!HIDE_EXPIRED) return false;
-  /* У грантов и «Дополнительно» ориентир только на дедлайн.
-   * Нет дедлайна — считаем актуальным. */
-  return isPastDate(item.deadlineDate);
-}
-
-/* ============================================================
- *  ЗАГРУЗКА
- * ============================================================ */
-async function loadAll() {
-  showSkeletons();
-  try {
-    const [ev, gr, ex] = await Promise.all([
-      loadSheet(SHEET_NAMES.events),
-      loadSheet(SHEET_NAMES.grants),
-      loadSheet(SHEET_NAMES.extra),
-    ]);
-
-    state.events = ev.map(normalizeEvent);
-    state.grants = gr.map(normalizeSimple);
-    state.extra  = ex.map(normalizeSimple);
-
-    updateCounters();
-    populateFilters();
-    renderEvents();
-    renderGrants();
-    renderExtra();
-
-    document.getElementById('status').textContent =
-      `Данные из Google Sheets · обновлено ${new Date().toLocaleString('ru-RU')}`;
-  } catch (err) {
-    console.error(err);
-    document.getElementById('events-container').innerHTML =
-      `<div class="error-box">
-        <div style="font-size:2.4rem;margin-bottom:10px;">⚠️</div>
-        <strong style="font-size:1.05rem;">Не удалось загрузить данные</strong>
-        <p style="margin-top:8px;">${escapeHtml(err.message)}</p>
-      </div>`;
-    document.getElementById('status').textContent = 'Ошибка загрузки данных';
-  }
-}
-
-/* Счётчики на вкладках — только актуальные позиции */
-function updateCounters() {
-  const eventsActual = state.events.filter(e => !isExpiredEvent(e)).length;
-  const grantsActual = state.grants.filter(g => !isExpiredSimple(g)).length;
-  const extraActual  = state.extra.filter(x => !isExpiredSimple(x)).length;
-
-  document.getElementById('count-events').textContent = eventsActual;
-  document.getElementById('count-grants').textContent = grantsActual;
-  document.getElementById('count-extra').textContent  = extraActual;
-}
-
-/* ============================================================
- *  ФИЛЬТРЫ
- * ============================================================ */
-function populateFilters() {
-  /* Тип и месяц строим по актуальным мероприятиям,
-   * чтобы в фильтре не было типов, которых больше не видно. */
-  const actualEvents = state.events.filter(e => !isExpiredEvent(e));
-
-  const types = [...new Set(actualEvents.map(e => e.type).filter(Boolean))].sort();
-
-  const monthIdxSet = new Set(
-    actualEvents.filter(e => e.dateStart).map(e => e.dateStart.getMonth())
-  );
-  const months = [...monthIdxSet]
-    .sort((a, b) => a - b)
-    .map(idx => MONTH_NAMES_NOM[idx]);
-
-  fillSelect('filter-type', types, 'Все типы');
-  fillSelect('filter-month', months, 'Все месяцы');
-}
-
-function fillSelect(id, values, placeholder) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-  values.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = v; opt.textContent = v;
-    sel.appendChild(opt);
-  });
-}
-
-/* ============================================================
- *  РЕНДЕР: МЕРОПРИЯТИЯ
+ *  РЕНДЕР: МЕРОПРИЯТИЯ — список по месяцам
  * ============================================================ */
 function renderEvents() {
   const type  = document.getElementById('filter-type').value;
@@ -350,9 +7,7 @@ function renderEvents() {
   const q     = document.getElementById('filter-search').value.toLowerCase().trim();
 
   let list = state.events.filter(e => {
-    /* Прячем то, у чего дедлайн прошёл */
     if (isExpiredEvent(e)) return false;
-
     if (type && e.type !== type) return false;
     if (month) {
       if (!e.dateStart) return false;
@@ -365,7 +20,7 @@ function renderEvents() {
     return true;
   });
 
-  /* Сортировка по дате проведения — независимо от порядка в таблице */
+  /* Сортировка по дате начала */
   list.sort((a, b) => {
     const da = a.dateStart ? a.dateStart.getTime() : Infinity;
     const db = b.dateStart ? b.dateStart.getTime() : Infinity;
@@ -373,180 +28,83 @@ function renderEvents() {
   });
 
   const container = document.getElementById('events-container');
+  container.className = 'events-list';
+
   if (!list.length) {
     container.innerHTML = emptyHTML('🔍', 'Ничего не найдено. Попробуйте изменить фильтры.');
     return;
   }
-  container.innerHTML = list.map(eventCardHTML).join('');
+
+  /* Группируем по месяцу + году */
+  const groups = new Map();
+  list.forEach(e => {
+    const key = e.dateStart
+      ? `${MONTH_NAMES_NOM[e.dateStart.getMonth()]} ${e.dateStart.getFullYear()}`
+      : 'Дата не указана';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  });
+
+  /* Порядок групп: сначала все с датой (уже в правильном порядке),
+     потом «Дата не указана» (если такие есть). */
+  const keys = [...groups.keys()];
+  keys.sort((a, b) => {
+    if (a === 'Дата не указана') return 1;
+    if (b === 'Дата не указана') return -1;
+    const ia = MONTH_NAMES_NOM.findIndex(m => a.startsWith(m));
+    const ib = MONTH_NAMES_NOM.findIndex(m => b.startsWith(m));
+    const ya = +(a.match(/\d{4}/)?.[0] || 0);
+    const yb = +(b.match(/\d{4}/)?.[0] || 0);
+    if (ya !== yb) return ya - yb;
+    return ia - ib;
+  });
+
+  let html = '';
+  keys.forEach(key => {
+    html += `
+      <section class="month-group">
+        <h2 class="month-heading">${escapeHtml(key)}</h2>
+        <div class="event-list">
+          ${groups.get(key).map(eventRowHTML).join('')}
+        </div>
+      </section>`;
+  });
+
+  container.innerHTML = html;
 }
 
-function eventCardHTML(e) {
-  const c = ACCENTS.events;
+function eventRowHTML(e) {
   const hasLink = /^https?:\/\//i.test(e.link);
   const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
+    ? `<a href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>`
     : escapeHtml(e.title);
 
-  const headerHTML = e.highlight
-    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
-    : '';
-
-  return `
-    <article class="card${e.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${headerHTML}
-      <h3 class="card-title">${titleHTML}</h3>
-      <div class="card-info">
-        ${e.dateRaw   ? `<div><span class="icon">📅</span><span>${escapeHtml(e.dateRaw)}</span></div>` : ''}
-        ${e.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
-      </div>
-      ${deadlineBlock(e)}
-    </article>`;
-}
-
-/* ============================================================
- *  РЕНДЕР: ГРАНТЫ И ДОПОЛНИТЕЛЬНО
- * ============================================================ */
-function renderGrants() {
-  const q = document.getElementById('grant-search').value.toLowerCase().trim();
-  const list = state.grants.filter(g => {
-    if (isExpiredSimple(g)) return false;
-    if (q && !(g.name + ' ' + g.organizer).toLowerCase().includes(q)) return false;
-    return true;
-  });
-  const container = document.getElementById('grants-container');
-  if (!list.length) {
-    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
-    return;
-  }
-  container.innerHTML = list.map(g => simpleCardHTML(g, ACCENTS.grants)).join('');
-}
-
-function renderExtra() {
-  const q = document.getElementById('extra-search').value.toLowerCase().trim();
-  const list = state.extra.filter(x => {
-    if (isExpiredSimple(x)) return false;
-    if (q && !(x.name + ' ' + x.organizer).toLowerCase().includes(q)) return false;
-    return true;
-  });
-  const container = document.getElementById('extra-container');
-  if (!list.length) {
-    container.innerHTML = emptyHTML('🔍', 'Ничего не найдено');
-    return;
-  }
-  container.innerHTML = list.map(x => simpleCardHTML(x, ACCENTS.extra)).join('');
-}
-
-function simpleCardHTML(item, c) {
-  const hasLink = /^https?:\/\//i.test(item.link);
-  const titleHTML = hasLink
-    ? `<a class="card-title-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>`
-    : escapeHtml(item.name);
-
-  const headerHTML = item.highlight
-    ? `<div class="card-header"><span class="type-badge new-badge">Новое</span></div>`
-    : '';
-
-  return `
-    <article class="card${item.highlight ? ' card--highlighted' : ''}" style="--card-accent:${c.accent}; --badge-bg:${c.bg}; --badge-fg:${c.fg};">
-      ${headerHTML}
-      <h3 class="card-title">${titleHTML}</h3>
-      <div class="card-info">
-        ${item.organizer ? `<div><span class="icon">🏢</span><span>${escapeHtml(item.organizer)}</span></div>` : ''}
-      </div>
-      ${deadlineBlock(item)}
-    </article>`;
-}
-
-/* ============================================================
- *  ОБЩИЙ БЛОК ДЕДЛАЙНА
- * ============================================================ */
-function deadlineBlock(item) {
-  const dd = daysUntil(item.deadlineDate);
+  const dd = daysUntil(e.deadlineDate);
   let dClass = '';
   let suffix = '';
-
-  if (item.deadlineDate) {
-    if (dd < 0) {
-      dClass = 'past';
-      suffix = ' · просрочен';
-    } else if (dd === 0) {
-      dClass = 'urgent';
-      suffix = ' · сегодня';
-    } else if (dd === 1) {
-      dClass = 'urgent';
-      suffix = ' · завтра';
-    } else {
+  if (e.deadlineDate) {
+    if (dd < 0) { dClass = 'past'; suffix = ' · просрочен'; }
+    else if (dd === 0) { dClass = 'urgent'; suffix = ' · сегодня'; }
+    else if (dd === 1) { dClass = 'urgent'; suffix = ' · завтра'; }
+    else {
       if (dd <= 7) dClass = 'urgent';
       else if (dd <= 30) dClass = 'soon';
-      suffix = ` · через ${dd} дн.`;
+      suffix = ` · ${dd} дн.`;
     }
   }
-
-  const deadlineLabel = item.deadlineRaw || 'не указан';
-  const hasLink = /^https?:\/\//i.test(item.link || '');
+  const deadlineLabel = e.deadlineRaw || '—';
 
   return `
-    <div class="card-footer">
-      <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${suffix}</span>
-      ${hasLink ? `<a class="card-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
-    </div>`;
+    <article class="event-row${e.highlight ? ' event-row--highlighted' : ''}">
+      <div class="event-row-date">${escapeHtml(e.dateRaw || '—')}</div>
+      <div class="event-row-main">
+        ${e.highlight ? '<div><span class="new-badge">Новое</span></div>' : ''}
+        <h3 class="event-row-title">${titleHTML}</h3>
+        ${e.organizer ? `<div class="event-row-org"><span class="icon">🏢</span><span>${escapeHtml(e.organizer)}</span></div>` : ''}
+      </div>
+      <div class="event-row-right">
+        <span class="deadline ${dClass}">⏰ ${escapeHtml(deadlineLabel)}${suffix}</span>
+        ${hasLink ? `<a class="card-link" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
+      </div>
+    </article>`;
 }
-
-function emptyHTML(emoji, text) {
-  return `<div class="no-results">
-    <span class="emoji">${emoji}</span>
-    <div>${text}</div>
-  </div>`;
-}
-
-/* ============================================================
- *  СКЕЛЕТОНЫ
- * ============================================================ */
-function showSkeletons() {
-  document.getElementById('events-container').innerHTML =
-    Array.from({ length: 6 }, () => `<div class="skeleton"></div>`).join('');
-  document.getElementById('grants-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
-  document.getElementById('extra-container').innerHTML =
-    Array.from({ length: 3 }, () => `<div class="skeleton"></div>`).join('');
-}
-
-/* ============================================================
- *  ИНИЦИАЛИЗАЦИЯ
- * ============================================================ */
-function bindUI() {
-  ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-    document.getElementById(id).addEventListener('input', renderEvents);
-  });
-
-  document.getElementById('clear-events').addEventListener('click', () => {
-    ['filter-type', 'filter-month', 'filter-search'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    renderEvents();
-  });
-
-  document.getElementById('sort-date').addEventListener('click', function () {
-    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-    this.textContent = state.sortDir === 'asc' ? 'Дата ↑' : 'Дата ↓';
-    renderEvents();
-  });
-
-  document.getElementById('grant-search').addEventListener('input', renderGrants);
-  document.getElementById('extra-search').addEventListener('input', renderExtra);
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      this.classList.add('active');
-      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
-
-      applyTabTheme(this.dataset.tab);
-    });
-  });
-}
-
-applyTabTheme('events');
-bindUI();
-loadAll();
