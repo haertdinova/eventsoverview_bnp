@@ -436,22 +436,19 @@ function deadlineBlock(item) {
   let inner = '';
 
   if (!item.deadlineDate) {
-    /* Дата не распозналась — показываем как есть, серым */
-    inner = `<span class="deadline-date muted">${escapeHtml(raw || 'не указан')}</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date muted">${escapeHtml(raw || 'не указан')}</span>`;
   } else if (dd < 0) {
-    /* Уже прошло — серым */
-    inner = `<span class="deadline-date muted">${escapeHtml(raw)}</span>`;
+    inner = `<span class="deadline-label">Приём заявок был до</span> <span class="deadline-date muted">${escapeHtml(raw)}</span>`;
   } else if (dd === 0) {
-    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">сегодня</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">сегодня</span>`;
   } else if (dd === 1) {
-    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">завтра</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">завтра</span>`;
   } else if (dd <= 7) {
-    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">через ${dd} дн.</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">через ${dd} дн.</span>`;
   } else if (dd <= 30) {
-    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when soon">через ${dd} дн.</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when soon">через ${dd} дн.</span>`;
   } else {
-    /* Больше 30 дней — только дата, ничего кричащего */
-    inner = `<span class="deadline-date">${escapeHtml(raw)}</span>`;
+    inner = `<span class="deadline-label">Приём заявок до</span> <span class="deadline-date">${escapeHtml(raw)}</span>`;
   }
 
   return `
