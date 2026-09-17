@@ -272,7 +272,8 @@ body {
  *  CARDS
  * ============================================================ */
 .cards-grid {
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
   gap: 18px;
   align-items: stretch;
 }
