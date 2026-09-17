@@ -429,27 +429,34 @@ function simpleCardHTML(item, c) {
  *  ОБЩИЙ БЛОК ДЕДЛАЙНА
  * ============================================================ */
 function deadlineBlock(item) {
-  const dd = daysUntil(item.deadlineDate);
-  let dClass = '';
-  let suffix = '';
-
-  if (item.deadlineDate) {
-    if (dd < 0) { dClass = 'past'; suffix = ' · просрочен'; }
-    else if (dd === 0) { dClass = 'urgent'; suffix = ' · сегодня'; }
-    else if (dd === 1) { dClass = 'urgent'; suffix = ' · завтра'; }
-    else {
-      if (dd <= 7) dClass = 'urgent';
-      else if (dd <= 30) dClass = 'soon';
-      suffix = ` · через ${dd} дн.`;
-    }
-  }
-
-  const deadlineLabel = item.deadlineRaw || 'не указан';
   const hasLink = /^https?:\/\//i.test(item.link || '');
+  const dd = daysUntil(item.deadlineDate);
+  const raw = item.deadlineRaw || '';
+
+  let inner = '';
+
+  if (!item.deadlineDate) {
+    /* Дата не распозналась — показываем как есть, серым */
+    inner = `<span class="deadline-date muted">${escapeHtml(raw || 'не указан')}</span>`;
+  } else if (dd < 0) {
+    /* Уже прошло — серым */
+    inner = `<span class="deadline-date muted">${escapeHtml(raw)}</span>`;
+  } else if (dd === 0) {
+    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">сегодня</span>`;
+  } else if (dd === 1) {
+    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">завтра</span>`;
+  } else if (dd <= 7) {
+    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when urgent">через ${dd} дн.</span>`;
+  } else if (dd <= 30) {
+    inner = `<span class="deadline-date">${escapeHtml(raw)}</span> <span class="deadline-when soon">через ${dd} дн.</span>`;
+  } else {
+    /* Больше 30 дней — только дата, ничего кричащего */
+    inner = `<span class="deadline-date">${escapeHtml(raw)}</span>`;
+  }
 
   return `
     <div class="card-footer">
-      <span class="deadline ${dClass}">⏰ Дедлайн: ${escapeHtml(deadlineLabel)}${suffix}</span>
+      <span class="deadline">⏰ ${inner}</span>
       ${hasLink ? `<a class="card-link" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">Сайт →</a>` : ''}
     </div>`;
 }
