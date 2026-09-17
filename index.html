@@ -37,7 +37,6 @@
       </button>
     </nav>
 
-    <!-- Вкладка: Мероприятия -->
     <section id="tab-events" class="tab-content active">
       <div class="filters">
         <div class="filter">
@@ -48,17 +47,30 @@
           <label for="filter-month">Месяц</label>
           <select id="filter-month"><option value="">Все месяцы</option></select>
         </div>
+        <div class="filter">
+          <label for="filter-organizer">Организатор</label>
+          <select id="filter-organizer"><option value="">Все организаторы</option></select>
+        </div>
+        <div class="filter">
+          <label for="sort-by">Сортировка</label>
+          <select id="sort-by">
+            <option value="date-asc">Дата проведения ↑</option>
+            <option value="date-desc">Дата проведения ↓</option>
+            <option value="deadline-asc">Дедлайн: сначала срочные</option>
+            <option value="deadline-desc">Дедлайн: сначала дальние</option>
+            <option value="name-asc">Название А → Я</option>
+            <option value="name-desc">Название Я → А</option>
+          </select>
+        </div>
         <div class="filter filter-search">
           <label for="filter-search">Поиск</label>
           <input type="search" id="filter-search" placeholder="Название, организатор, дата…" />
         </div>
         <button class="btn-ghost" id="clear-events">Сбросить</button>
-        <button class="btn-sort" id="sort-date">Дата ↑</button>
       </div>
       <div class="cards-grid" id="events-container"></div>
     </section>
 
-    <!-- Вкладка: Гранты -->
     <section id="tab-grants" class="tab-content">
       <div class="filters">
         <div class="filter filter-search">
@@ -69,7 +81,6 @@
       <div class="cards-grid" id="grants-container"></div>
     </section>
 
-    <!-- Вкладка: Дополнительно -->
     <section id="tab-extra" class="tab-content">
       <div class="filters">
         <div class="filter filter-search">
