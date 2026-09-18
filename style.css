@@ -492,7 +492,6 @@ body {
   html { font-size: 16px; }
   body { padding: 16px 12px 32px; }
 
-  /* FILTERS — прячем под кнопку */
   .filters-toggle { display: block; }
   .filters {
     display: none;
@@ -507,7 +506,6 @@ body {
   #filter-organizer, #sort-by, .filter-search { min-width: 0; }
   .btn-ghost { width: 100%; }
 
-  /* RESULTS BAR — компактнее */
   .results-bar {
     margin-bottom: 12px;
     gap: 8px;
@@ -524,7 +522,6 @@ body {
     flex-shrink: 0;
   }
 
-  /* CARDS */
   .cards-grid { grid-template-columns: 1fr; gap: 12px; }
   .card { padding: 14px 16px 12px; }
   .card-title {
@@ -533,32 +530,36 @@ body {
   }
   .card--highlighted .card-title { padding-right: 0; }
 
-  /* Плашка «Новое» — статичная, над заголовком */
+  /* Плашка «Новое» — не растягивается, а обнимает текст */
   .new-badge {
     position: static;
     display: inline-flex;
+    align-self: flex-start;      /* ← вот это */
+    width: fit-content;           /* ← и это */
     margin-bottom: 8px;
     padding: 2px 9px;
     font-size: .68rem;
   }
 
-  /* Футер карточки — дедлайн и ссылка в столбик */
   .card-footer {
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
     padding-top: 12px;
   }
+
+  /* Дедлайн — компактнее, чтобы влезал в одну строку */
   .deadline {
-    font-size: .84rem;
-    flex-wrap: wrap;
+    font-size: .8rem;              /* было .84rem */
+    gap: 4px;                       /* было 6px */
+    letter-spacing: -.01em;
   }
+
   .card-link {
     align-self: flex-end;
     font-size: .84rem;
   }
 
-  /* Skeleton */
   .skeleton-card { padding: 14px 16px 12px; min-height: 150px; }
 }
 
